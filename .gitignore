@@ -40,3 +40,20 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Agent infrastructure symlinks (local only — targets live in ../gesture_recognition/)
+agents
+comms
+decisions
+.vision-click
+questions-for-dad
+reviews
+consults
+scripts
+docs
+riley-orchestration-log.md
+dad-review-log.md
+dad-guidance-to-riley.md
+time-card.md
+vision-click-campaign-hub.md
+current-state.md
