@@ -14,6 +14,7 @@ type Props = {
 
 export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Props) {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const moviesRef = useRef<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
   const [voted, setVoted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,10 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 
   useEffect(() => {
     fetchPopularMovies()
-      .then(setMovies)
+      .then(data => {
+        moviesRef.current = data;
+        setMovies(data);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -43,11 +47,12 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
     }
     const myVote = isPlayer1 ? session.player1_voted : session.player2_voted;
     const theirVote = isPlayer1 ? session.player2_voted : session.player1_voted;
-    if (movies.length === 0) return;
+    const currentMovies = moviesRef.current;
+    if (currentMovies.length === 0) return;
     if (myVote === 'yes' && theirVote === 'yes') {
-      setMatched(code, movies[session.current_movie_index].title);
+      setMatched(code, currentMovies[session.current_movie_index].title);
     } else if (myVote && theirVote && !(myVote === 'yes' && theirVote === 'yes')) {
-      const next = (session.current_movie_index + 1) % movies.length;
+      const next = (session.current_movie_index + 1) % currentMovies.length;
       advanceMovie(code, next);
     }
   }
