@@ -1,12 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { advanceMovie, setMatched, submitVote, subscribeToSession } from '../services/sessions';
 
 const MOVIES = [
-  { title: 'Interstellar', year: '2014', genre: 'Sci-Fi', tagline: 'Mankind was born on Earth. It was never meant to die here.', color: '#1a3a5c' },
-  { title: 'Inception', year: '2010', genre: 'Thriller', tagline: 'Your mind is the scene of the crime.', color: '#2d1b4e' },
-  { title: 'The Dark Knight', year: '2008', genre: 'Action', tagline: 'Why so serious?', color: '#1a1a1a' },
-  { title: 'Knives Out', year: '2019', genre: 'Mystery', tagline: 'Hell of a thing to lose.', color: '#3b2a1a' },
+  {
+    title: 'Interstellar',
+    year: '2014',
+    genre: 'Sci-Fi',
+    tagline: 'Mankind was born on Earth. It was never meant to die here.',
+    image: 'https://picsum.photos/seed/interstellar/400/600',
+  },
+  {
+    title: 'Inception',
+    year: '2010',
+    genre: 'Thriller',
+    tagline: 'Your mind is the scene of the crime.',
+    image: 'https://picsum.photos/seed/inception/400/600',
+  },
+  {
+    title: 'The Dark Knight',
+    year: '2008',
+    genre: 'Action',
+    tagline: 'Why so serious?',
+    image: 'https://picsum.photos/seed/darkknight/400/600',
+  },
+  {
+    title: 'Knives Out',
+    year: '2019',
+    genre: 'Mystery',
+    tagline: 'Hell of a thing to lose.',
+    image: 'https://picsum.photos/seed/knivesout/400/600',
+  },
 ];
 
 type Props = {
@@ -57,9 +81,12 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 
   return (
     <View style={styles.container}>
-      <View style={[styles.poster, { backgroundColor: movie.color }]}>
-        <Text style={styles.movieTitle}>{movie.title}</Text>
-        <Text style={styles.movieMeta}>{movie.genre} • {movie.year}</Text>
+      <View style={styles.posterContainer}>
+        <Image source={{ uri: movie.image }} style={styles.posterImage} resizeMode="cover" />
+        <View style={styles.posterOverlay}>
+          <Text style={styles.movieTitle}>{movie.title}</Text>
+          <Text style={styles.movieMeta}>{movie.genre} • {movie.year}</Text>
+        </View>
       </View>
       <View style={styles.info}>
         <Text style={styles.tagline}>"{movie.tagline}"</Text>
@@ -78,8 +105,34 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f0f23', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 60 },
-  poster: { width: '100%', height: '55%', justifyContent: 'flex-end', padding: 24 },
+  container: {
+    flex: 1,
+    backgroundColor: '#0f0f23',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 60,
+  },
+  posterContainer: {
+    width: '100%',
+    height: '55%',
+    overflow: 'hidden',
+  },
+  posterImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  posterOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 24,
+    paddingTop: 48,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
   movieTitle: { fontSize: 32, fontWeight: '700', color: '#ffffff', letterSpacing: -0.5 },
   movieMeta: { fontSize: 16, color: '#aaaacc', marginTop: 4 },
   info: { paddingHorizontal: 32, flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
