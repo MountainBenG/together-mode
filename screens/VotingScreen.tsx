@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const POSTER_HEIGHT = SCREEN_HEIGHT * 0.55;
 import { advanceMovie, setMatched, submitVote, subscribeToSession } from '../services/sessions';
 
 const MOVIES = [
@@ -81,24 +84,22 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 
   return (
     <View style={styles.container}>
-      <View style={styles.posterContainer}>
-        <Image source={{ uri: movie.image }} style={styles.posterImage} resizeMode="cover" />
-        <View style={styles.posterOverlay}>
+      <Image source={{ uri: movie.image }} style={styles.backgroundImage} resizeMode="cover" />
+      <View style={styles.overlay}>
+        <View style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
           <Text style={styles.movieMeta}>{movie.genre} • {movie.year}</Text>
+          <Text style={styles.tagline}>"{movie.tagline}"</Text>
+          {voted && <Text style={styles.waiting}>Waiting for the other person…</Text>}
+          <View style={styles.buttons}>
+            <TouchableOpacity style={[styles.noButton, voted && styles.dimmed]} onPress={() => handleVote('no')} disabled={voted}>
+              <Text style={styles.noText}>✕</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.yesButton, voted && styles.dimmed]} onPress={() => handleVote('yes')} disabled={voted}>
+              <Text style={styles.yesText}>✓</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      <View style={styles.info}>
-        <Text style={styles.tagline}>"{movie.tagline}"</Text>
-        {voted && <Text style={styles.waiting}>Waiting for the other person…</Text>}
-      </View>
-      <View style={styles.buttons}>
-        <TouchableOpacity style={[styles.noButton, voted && styles.dimmed]} onPress={() => handleVote('no')} disabled={voted}>
-          <Text style={styles.noText}>✕</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.yesButton, voted && styles.dimmed]} onPress={() => handleVote('yes')} disabled={voted}>
-          <Text style={styles.yesText}>✓</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -107,41 +108,34 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0f23',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 60,
   },
-  posterContainer: {
-    width: '100%',
-    height: '55%',
-    overflow: 'hidden',
-  },
-  posterImage: {
+  backgroundImage: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
   },
-  posterOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 24,
-    paddingTop: 48,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'transparent',
   },
-  movieTitle: { fontSize: 32, fontWeight: '700', color: '#ffffff', letterSpacing: -0.5 },
-  movieMeta: { fontSize: 16, color: '#aaaacc', marginTop: 4 },
-  info: { paddingHorizontal: 32, flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  tagline: { fontSize: 16, color: '#8888aa', textAlign: 'center', lineHeight: 24, fontStyle: 'italic' },
-  waiting: { fontSize: 14, color: '#6c63ff' },
-  buttons: { flexDirection: 'row', gap: 24, paddingHorizontal: 40 },
-  noButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: '#2a1a1a', borderWidth: 2, borderColor: '#ff4455', alignItems: 'center', justifyContent: 'center' },
+  bottomContent: {
+    paddingHorizontal: 28,
+    paddingBottom: 60,
+    paddingTop: 80,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    gap: 8,
+  },
+  movieTitle: { fontSize: 30, fontWeight: '700', color: '#ffffff', letterSpacing: -0.5 },
+  movieMeta: { fontSize: 15, color: '#aaaacc' },
+  tagline: { fontSize: 14, color: '#cccccc', lineHeight: 20, fontStyle: 'italic' },
+  waiting: { fontSize: 13, color: '#6c63ff' },
+  buttons: { flexDirection: 'row', gap: 20, marginTop: 16 },
+  noButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(42,26,26,0.85)', borderWidth: 2, borderColor: '#ff4455', alignItems: 'center', justifyContent: 'center' },
   noText: { fontSize: 32, color: '#ff4455' },
-  yesButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: '#1a2a1a', borderWidth: 2, borderColor: '#44ff88', alignItems: 'center', justifyContent: 'center' },
+  yesButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(26,42,26,0.85)', borderWidth: 2, borderColor: '#44ff88', alignItems: 'center', justifyContent: 'center' },
   yesText: { fontSize: 32, color: '#44ff88' },
   dimmed: { opacity: 0.4 },
 });
