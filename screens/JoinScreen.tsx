@@ -10,6 +10,15 @@ export default function JoinScreen({ onJoin, onCancel }: Props) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
 
+  function handleCodeChange(text: string) {
+    const upper = text.toUpperCase();
+    setCode(upper);
+    setError('');
+    if (upper.trim().length === 4) {
+      onJoin(upper.trim());
+    }
+  }
+
   function handleJoin() {
     if (code.trim().length < 4) {
       setError('Enter the 4-letter code');
@@ -26,7 +35,7 @@ export default function JoinScreen({ onJoin, onCancel }: Props) {
         <TextInput
           style={styles.input}
           value={code}
-          onChangeText={(t) => setCode(t.toUpperCase())}
+          onChangeText={handleCodeChange}
           placeholder="ABCD"
           placeholderTextColor="#333355"
           maxLength={4}
