@@ -10,6 +10,18 @@ export type Movie = {
   image: string;
 };
 
+export async function fetchTrailerKey(movieId: number): Promise<string | null> {
+  const res = await fetch(
+    `${TMDB_BASE}/movie/${movieId}/videos?api_key=${API_KEY}&language=en-US`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  const trailer = data.results.find(
+    (v: any) => v.site === 'YouTube' && v.type === 'Trailer'
+  );
+  return trailer?.key ?? null;
+}
+
 export async function fetchPopularMovies(): Promise<Movie[]> {
   const res = await fetch(
     `${TMDB_BASE}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`

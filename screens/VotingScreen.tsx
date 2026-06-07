@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import WebView from 'react-native-webview';
 import { advanceMovie, setMatched, submitVote, subscribeToSession } from '../services/sessions';
-import { fetchPopularMovies, Movie } from '../services/movies';
+import { fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -18,6 +19,9 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
   const [movieIndex, setMovieIndex] = useState(0);
   const [voted, setVoted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [trailerLoading, setTrailerLoading] = useState(false);
   const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -44,6 +48,8 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
     if (session.current_movie_index !== movieIndex) {
       setMovieIndex(session.current_movie_index);
       setVoted(false);
+      setShowTrailer(false);
+      setTrailerKey(null);
     }
     const myVote = isPlayer1 ? session.player1_voted : session.player2_voted;
     const theirVote = isPlayer1 ? session.player2_voted : session.player1_voted;
@@ -54,6 +60,20 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
     } else if (myVote && theirVote && !(myVote === 'yes' && theirVote === 'yes')) {
       const next = (session.current_movie_index + 1) % currentMovies.length;
       advanceMovie(code, next);
+    }
+  }
+
+  async function handleWatchTrailer() {
+    if (trailerKey) {
+      setShowTrailer(v => !v);
+      return;
+    }
+    setTrailerLoading(true);
+    const key = await fetchTrailerKey(movies[movieIndex % movies.length].id);
+    setTrailerLoading(false);
+    if (key) {
+      setTrailerKey(key);
+      setShowTrailer(true);
     }
   }
 
@@ -84,12 +104,27 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 
   return (
     <View style={styles.container}>
-      <Image source={{ uri: movie.image }} style={styles.backgroundImage} resizeMode="cover" />
+      {showTrailer && trailerKey ? (
+        <WebView
+          source={{ uri: `https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&rel=0` }}
+          style={styles.backgroundImage}
+          allowsFullscreenVideo
+          mediaPlaybackRequiresUserAction={false}
+        />
+      ) : (
+        <Image source={{ uri: movie.image }} style={styles.backgroundImage} resizeMode="cover" />
+      )}
       <View style={styles.overlay}>
         <View style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
           <Text style={styles.movieMeta}>{movie.year}</Text>
-          <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>
+          {!showTrailer && <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>}
+          <TouchableOpacity onPress={handleWatchTrailer} style={styles.trailerButton} disabled={trailerLoading}>
+            {trailerLoading
+              ? <ActivityIndicator size="small" color="#ffffff" />
+              : <Text style={styles.trailerButtonText}>{showTrailer ? '🖼 Back to poster' : '▶ Watch trailer'}</Text>
+            }
+          </TouchableOpacity>
           {voted && <Text style={styles.waiting}>Waiting for the other person…</Text>}
           <View style={styles.buttons}>
             <TouchableOpacity style={[styles.noButton, voted && styles.dimmed]} onPress={() => handleVote('no')} disabled={voted}>
@@ -142,6 +177,8 @@ const styles = StyleSheet.create({
   movieMeta: { fontSize: 15, color: '#aaaacc' },
   tagline: { fontSize: 14, color: '#cccccc', lineHeight: 20 },
   waiting: { fontSize: 13, color: '#6c63ff' },
+  trailerButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+  trailerButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
   buttons: { flexDirection: 'row', gap: 20, marginTop: 16 },
   noButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(42,26,26,0.85)', borderWidth: 2, borderColor: '#ff4455', alignItems: 'center', justifyContent: 'center' },
   noText: { fontSize: 32, color: '#ff4455' },
