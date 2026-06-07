@@ -1,28 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import WebView from 'react-native-webview';
-import { advanceMovie, setMatched, submitVote, subscribeToSession } from '../services/sessions';
+import { advanceMovie, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
 import { fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
+import { track } from '../services/analytics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const TIEBREAKER_AFTER = 8;
 
 type Props = {
   code: string;
   playerId: string;
   isPlayer1: boolean;
   onMatch: (title: string) => void;
+  onTiebreaker: (myYesPicks: Movie[]) => void;
 };
 
-export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Props) {
+export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTiebreaker }: Props) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const moviesRef = useRef<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
   const [voted, setVoted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showTrailer, setShowTrailer] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
-  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [muted, setMuted] = useState(true);
   const subscriptionRef = useRef<any>(null);
+  const myYesPicksRef = useRef<Movie[]>([]);
 
   useEffect(() => {
     fetchPopularMovies()
@@ -40,46 +44,61 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
     };
   }, [code]);
 
+  // Auto-fetch + autoplay the trailer whenever the current movie changes.
+  // Falls back to the poster while loading or if the movie has no trailer.
+  useEffect(() => {
+    if (movies.length === 0) return;
+    let cancelled = false;
+    setTrailerKey(null);
+    setMuted(true);
+    fetchTrailerKey(movies[movieIndex % movies.length].id).then(key => {
+      if (!cancelled) setTrailerKey(key);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [movieIndex, movies]);
+
   function handleSessionUpdate(session: any) {
     if (session.status === 'matched') {
       onMatch(session.matched_movie_title);
       return;
     }
+    if (session.status === 'tiebreaker') {
+      onTiebreaker(myYesPicksRef.current);
+      return;
+    }
     if (session.current_movie_index !== movieIndex) {
       setMovieIndex(session.current_movie_index);
       setVoted(false);
-      setShowTrailer(false);
-      setTrailerKey(null);
     }
     const myVote = isPlayer1 ? session.player1_voted : session.player2_voted;
     const theirVote = isPlayer1 ? session.player2_voted : session.player1_voted;
     const currentMovies = moviesRef.current;
     if (currentMovies.length === 0) return;
     if (myVote === 'yes' && theirVote === 'yes') {
+      track('match_found', code, playerId, { movie: currentMovies[session.current_movie_index]?.title });
       setMatched(code, currentMovies[session.current_movie_index].title);
     } else if (myVote && theirVote && !(myVote === 'yes' && theirVote === 'yes')) {
-      const next = (session.current_movie_index + 1) % currentMovies.length;
-      advanceMovie(code, next);
-    }
-  }
-
-  async function handleWatchTrailer() {
-    if (trailerKey) {
-      setShowTrailer(v => !v);
-      return;
-    }
-    setTrailerLoading(true);
-    const key = await fetchTrailerKey(movies[movieIndex % movies.length].id);
-    setTrailerLoading(false);
-    if (key) {
-      setTrailerKey(key);
-      setShowTrailer(true);
+      if (session.current_movie_index >= TIEBREAKER_AFTER - 1) {
+        track('tiebreaker_started', code, playerId);
+        setTiebreaker(code);
+      } else {
+        const next = session.current_movie_index + 1;
+        advanceMovie(code, next);
+      }
     }
   }
 
   async function handleVote(vote: 'yes' | 'no') {
     if (voted) return;
     setVoted(true);
+    const currentMovies = moviesRef.current;
+    const movie = currentMovies[movieIndex % currentMovies.length];
+    track('vote_cast', code, playerId, { vote, movie: movie?.title });
+    if (vote === 'yes' && movie) {
+      myYesPicksRef.current = [...myYesPicksRef.current, movie];
+    }
     await submitVote(code, playerId, isPlayer1, vote);
   }
 
@@ -104,12 +123,13 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
 
   return (
     <View style={styles.container}>
-      {showTrailer && trailerKey ? (
+      {trailerKey ? (
         <WebView
-          source={{ uri: `https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&rel=0` }}
+          source={{ uri: `https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=${muted ? 1 : 0}&playsinline=1&controls=0&rel=0&modestbranding=1` }}
           style={styles.backgroundImage}
-          allowsFullscreenVideo
+          allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
+          allowsFullscreenVideo={false}
         />
       ) : (
         <Image source={{ uri: movie.image }} style={styles.backgroundImage} resizeMode="cover" />
@@ -118,13 +138,12 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch }: Pro
         <View style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
           <Text style={styles.movieMeta}>{movie.year}</Text>
-          {!showTrailer && <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>}
-          <TouchableOpacity onPress={handleWatchTrailer} style={styles.trailerButton} disabled={trailerLoading}>
-            {trailerLoading
-              ? <ActivityIndicator size="small" color="#ffffff" />
-              : <Text style={styles.trailerButtonText}>{showTrailer ? '🖼 Back to poster' : '▶ Watch trailer'}</Text>
-            }
-          </TouchableOpacity>
+          <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>
+          {trailerKey && (
+            <TouchableOpacity onPress={() => setMuted(m => !m)} style={styles.trailerButton}>
+              <Text style={styles.trailerButtonText}>{muted ? '🔇 Tap for sound' : '🔊 Sound on'}</Text>
+            </TouchableOpacity>
+          )}
           {voted && <Text style={styles.waiting}>Waiting for the other person…</Text>}
           <View style={styles.buttons}>
             <TouchableOpacity style={[styles.noButton, voted && styles.dimmed]} onPress={() => handleVote('no')} disabled={voted}>

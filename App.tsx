@@ -3,13 +3,16 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { getPlayerId } from './lib/playerId';
 import { createSession, joinSession, subscribeToSession } from './services/sessions';
+import { track } from './services/analytics';
+import { Movie } from './services/movies';
 import CodeScreen from './screens/CodeScreen';
 import HomeScreen from './screens/HomeScreen';
 import JoinScreen from './screens/JoinScreen';
 import MatchScreen from './screens/MatchScreen';
+import TiebreakerScreen from './screens/TiebreakerScreen';
 import VotingScreen from './screens/VotingScreen';
 
-type Screen = 'home' | 'code' | 'join' | 'voting' | 'match';
+type Screen = 'home' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -17,6 +20,7 @@ export default function App() {
   const [sessionCode, setSessionCode] = useState('');
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState('');
+  const [myYesPicks, setMyYesPicks] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const subscriptionRef = useRef<any>(null);
 
@@ -36,7 +40,9 @@ export default function App() {
         setScreen('voting');
       }
     });
-    return () => sub.unsubscribe();
+    return () => {
+      sub.unsubscribe();
+    };
   }, [screen, sessionCode]);
 
   async function handleStart() {
@@ -44,6 +50,7 @@ export default function App() {
     const code = await createSession(playerId);
     setLoading(false);
     if (code) {
+      track('session_started', code, playerId);
       setSessionCode(code);
       setIsPlayer1(true);
       setScreen('code');
@@ -55,6 +62,7 @@ export default function App() {
     const success = await joinSession(code, playerId);
     setLoading(false);
     if (success) {
+      track('session_joined', code, playerId);
       setSessionCode(code);
       setIsPlayer1(false);
       setScreen('voting');
@@ -66,10 +74,16 @@ export default function App() {
     setScreen('match');
   }
 
+  function handleTiebreaker(yesPicks: Movie[]) {
+    setMyYesPicks(yesPicks);
+    setScreen('tiebreaker');
+  }
+
   function handleReset() {
     setScreen('home');
     setSessionCode('');
     setMatchedMovie('');
+    setMyYesPicks([]);
   }
 
   if (loading) {
@@ -92,6 +106,16 @@ export default function App() {
           code={sessionCode}
           playerId={playerId}
           isPlayer1={isPlayer1}
+          onMatch={handleMatch}
+          onTiebreaker={handleTiebreaker}
+        />
+      )}
+      {screen === 'tiebreaker' && (
+        <TiebreakerScreen
+          code={sessionCode}
+          playerId={playerId}
+          isPlayer1={isPlayer1}
+          myYesPicks={myYesPicks}
           onMatch={handleMatch}
         />
       )}

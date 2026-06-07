@@ -80,6 +80,17 @@ export async function setMatched(code: string, movieTitle: string): Promise<void
     .eq('code', code.toUpperCase());
 }
 
+export async function setTiebreaker(code: string): Promise<void> {
+  await supabase
+    .from('sessions')
+    .update({
+      status: 'tiebreaker',
+      player1_voted: null,
+      player2_voted: null,
+    })
+    .eq('code', code.toUpperCase());
+}
+
 export function subscribeToSession(
   code: string,
   onChange: (session: any) => void
