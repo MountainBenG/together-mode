@@ -6,6 +6,7 @@ import { getPlayerId } from './lib/playerId';
 import { createSession, joinSession, subscribeToSession } from './services/sessions';
 import { track } from './services/analytics';
 import { Movie } from './services/movies';
+import { NEW_FLOW_ENABLED } from './lib/flags';
 import CodeScreen from './screens/CodeScreen';
 import GenreScreen from './screens/GenreScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -41,7 +42,8 @@ export default function App() {
       AsyncStorage.getItem(ONBOARDING_KEY),
     ]).then(([id, seen]) => {
       setPlayerId(id);
-      setScreen(seen ? 'home' : 'onboarding');
+      // Flag off = validated flow: skip onboarding, go straight home.
+      setScreen(NEW_FLOW_ENABLED && !seen ? 'onboarding' : 'home');
       setLoading(false);
     });
   }, []);
@@ -69,6 +71,19 @@ export default function App() {
     setLoading(true);
     setGenreId(selectedGenreId);
     const code = await createSession(playerId, selectedGenreId);
+    setLoading(false);
+    if (code) {
+      track('session_started', code, playerId);
+      setSessionCode(code);
+      setIsPlayer1(true);
+      setScreen('code');
+    }
+  }
+
+  // Validated flow (flag off): start a session immediately, no genre/age picker.
+  async function handleStartDirect() {
+    setLoading(true);
+    const code = await createSession(playerId);
     setLoading(false);
     if (code) {
       track('session_started', code, playerId);
@@ -147,7 +162,7 @@ export default function App() {
     <>
       <StatusBar style="light" />
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
-      {screen === 'home' && <HomeScreen onStart={() => setScreen('genre')} onJoin={() => setScreen('join')} />}
+      {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
       {screen === 'genre' && <GenreScreen onSelect={handleGenreSelect} />}
       {screen === 'code' && <CodeScreen code={sessionCode} onCancel={handleReset} />}
       {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}
