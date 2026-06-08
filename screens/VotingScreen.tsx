@@ -14,7 +14,7 @@ type Props = {
   playerId: string;
   isPlayer1: boolean;
   onMatch: (title: string) => void;
-  onTiebreaker: (myYesPicks: Movie[]) => void;
+  onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
 };
 
 export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTiebreaker }: Props) {
@@ -65,7 +65,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
       return;
     }
     if (session.status === 'tiebreaker') {
-      onTiebreaker(myYesPicksRef.current);
+      onTiebreaker(myYesPicksRef.current, moviesRef.current);
       return;
     }
     if (session.current_movie_index !== movieIndex) {
@@ -121,11 +121,21 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
 
   const movie = movies[movieIndex % movies.length];
 
+  // Embed YouTube inside an HTML <iframe> with a real baseUrl + referrerpolicy,
+  // instead of pointing the WebView straight at the embed URL. iOS WebViews don't
+  // send the Referer header YouTube requires for a bare-URL load, which triggers
+  // "Error 153 — video player configuration error". A real origin fixes it.
+  const embedUrl = trailerKey
+    ? `https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=${muted ? 1 : 0}&playsinline=1&controls=0&rel=0&modestbranding=1`
+    : '';
+  const trailerHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html,body{margin:0;padding:0;height:100%;background:#0f0f23;overflow:hidden}iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}</style></head><body><iframe src="${embedUrl}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></body></html>`;
+
   return (
     <View style={styles.container}>
       {trailerKey ? (
         <WebView
-          source={{ uri: `https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=${muted ? 1 : 0}&playsinline=1&controls=0&rel=0&modestbranding=1` }}
+          source={{ html: trailerHtml, baseUrl: 'https://www.youtube.com' }}
+          originWhitelist={['*']}
           style={styles.backgroundImage}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}

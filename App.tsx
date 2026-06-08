@@ -21,6 +21,7 @@ export default function App() {
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [myYesPicks, setMyYesPicks] = useState<Movie[]>([]);
+  const [allMovies, setAllMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const subscriptionRef = useRef<any>(null);
 
@@ -74,8 +75,9 @@ export default function App() {
     setScreen('match');
   }
 
-  function handleTiebreaker(yesPicks: Movie[]) {
+  function handleTiebreaker(yesPicks: Movie[], movies: Movie[]) {
     setMyYesPicks(yesPicks);
+    setAllMovies(movies);
     setScreen('tiebreaker');
   }
 
@@ -84,6 +86,7 @@ export default function App() {
     setSessionCode('');
     setMatchedMovie('');
     setMyYesPicks([]);
+    setAllMovies([]);
   }
 
   if (loading) {
@@ -116,6 +119,7 @@ export default function App() {
           playerId={playerId}
           isPlayer1={isPlayer1}
           myYesPicks={myYesPicks}
+          allMovies={allMovies}
           onMatch={handleMatch}
         />
       )}

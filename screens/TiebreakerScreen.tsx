@@ -11,10 +11,12 @@ type Props = {
   playerId: string;
   isPlayer1: boolean;
   myYesPicks: Movie[];
+  allMovies: Movie[];
   onMatch: (title: string) => void;
 };
 
-export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks, onMatch }: Props) {
+export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks, allMovies, onMatch }: Props) {
+  const pickList = myYesPicks.length > 0 ? myYesPicks : allMovies.slice(0, 8);
   const [phase, setPhase] = useState<Phase>('pick');
   const phaseRef = useRef<Phase>('pick');
   const [myPick, setMyPick] = useState<Movie | null>(null);
@@ -62,11 +64,6 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
     await submitVote(code, playerId, isPlayer1, movie.title as any);
   }
 
-  async function handlePickRandom() {
-    const dummy: Movie = { id: 0, title: 'Surprise Pick', year: '', overview: '', image: '' };
-    await handlePick(dummy);
-  }
-
   async function handleFaceoffVote(title: string) {
     if (voted) return;
     setVoted(true);
@@ -82,39 +79,32 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
           <Text style={styles.subtitle}>8 movies, no match. Pick your favorite one you said yes to.</Text>
         </View>
 
-        {myYesPicks.length === 0 ? (
-          <View style={styles.noPicks}>
-            <Text style={styles.noPicksText}>You didn't vote yes on anything…</Text>
-            <Text style={styles.noPicksSub}>A random movie will be picked for you.</Text>
-            <TouchableOpacity style={styles.primaryButton} onPress={handlePickRandom} disabled={!!myPick}>
-              <Text style={styles.primaryButtonText}>Pick for me</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <ScrollView contentContainerStyle={styles.pickList} showsVerticalScrollIndicator={false}>
-            {myYesPicks.map((movie) => (
-              <TouchableOpacity
-                key={movie.id}
-                style={[styles.movieCard, myPick?.id === movie.id && styles.movieCardSelected]}
-                onPress={() => handlePick(movie)}
-                disabled={!!myPick}
-              >
-                {movie.image ? (
-                  <Image source={{ uri: movie.image }} style={styles.movieThumb} resizeMode="cover" />
-                ) : null}
-                <View style={styles.movieInfo}>
-                  <Text style={styles.movieTitle}>{movie.title}</Text>
-                  <Text style={styles.movieYear}>{movie.year}</Text>
-                </View>
-                {myPick?.id === movie.id ? (
-                  <Text style={styles.checkmark}>✓</Text>
-                ) : (
-                  <Text style={styles.pickArrow}>→</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        {myYesPicks.length === 0 && (
+          <Text style={styles.noPicksNote}>You didn't vote yes on anything — pick one of these:</Text>
         )}
+        <ScrollView contentContainerStyle={styles.pickList} showsVerticalScrollIndicator={false}>
+          {pickList.map((movie) => (
+            <TouchableOpacity
+              key={movie.id}
+              style={[styles.movieCard, myPick?.id === movie.id && styles.movieCardSelected]}
+              onPress={() => handlePick(movie)}
+              disabled={!!myPick}
+            >
+              {movie.image ? (
+                <Image source={{ uri: movie.image }} style={styles.movieThumb} resizeMode="cover" />
+              ) : null}
+              <View style={styles.movieInfo}>
+                <Text style={styles.movieTitle}>{movie.title}</Text>
+                <Text style={styles.movieYear}>{movie.year}</Text>
+              </View>
+              {myPick?.id === movie.id ? (
+                <Text style={styles.checkmark}>✓</Text>
+              ) : (
+                <Text style={styles.pickArrow}>→</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {myPick && (
           <View style={styles.waitingRow}>
@@ -230,33 +220,11 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     fontWeight: '700',
   },
-  noPicks: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  noPicksText: {
-    fontSize: 18,
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  noPicksSub: {
+  noPicksNote: {
     fontSize: 14,
     color: '#8888aa',
+    marginBottom: 12,
     textAlign: 'center',
-  },
-  primaryButton: {
-    marginTop: 8,
-    backgroundColor: '#6c63ff',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 14,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
   },
   waitingRow: {
     alignItems: 'center',
