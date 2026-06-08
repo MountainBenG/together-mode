@@ -157,6 +157,9 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
       ) : (
         <Image source={{ uri: movie.image }} style={styles.backgroundImage} resizeMode="cover" />
       )}
+      <View style={styles.progressPill}>
+        <Text style={styles.progressText}>Movie {Math.min(movieIndex + 1, TIEBREAKER_AFTER)} of {TIEBREAKER_AFTER}</Text>
+      </View>
       <View style={styles.overlay}>
         <View style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
@@ -196,6 +199,22 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  progressPill: {
+    position: 'absolute',
+    top: 56,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  progressText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   backgroundImage: {
     position: 'absolute',
