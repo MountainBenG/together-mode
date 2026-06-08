@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -31,6 +31,13 @@ export default function MatchScreen({ movieTitle, movieImage, onReset }: Props) 
     ]).start();
   }, []);
 
+  // Open JustWatch's "where to watch" search for the matched movie. JustWatch
+  // lists which streaming services actually have it, so the match has somewhere to go.
+  function handleWhereToWatch() {
+    const url = `https://www.justwatch.com/us/search?q=${encodeURIComponent(movieTitle)}`;
+    Linking.openURL(url).catch(() => {});
+  }
+
   return (
     <View style={styles.container}>
       {movieImage ? (
@@ -56,8 +63,8 @@ export default function MatchScreen({ movieTitle, movieImage, onReset }: Props) 
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.watchButton} activeOpacity={0.85}>
-          <Text style={styles.watchButtonText}>▶  Start watching</Text>
+        <TouchableOpacity style={styles.watchButton} activeOpacity={0.85} onPress={handleWhereToWatch}>
+          <Text style={styles.watchButtonText}>Where to watch</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.againButton} onPress={onReset} activeOpacity={0.7}>
           <Text style={styles.againButtonText}>Pick something else</Text>
