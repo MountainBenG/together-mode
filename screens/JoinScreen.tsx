@@ -4,9 +4,10 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 type Props = {
   onJoin: (code: string) => void;
   onCancel: () => void;
+  externalError?: string;
 };
 
-export default function JoinScreen({ onJoin, onCancel }: Props) {
+export default function JoinScreen({ onJoin, onCancel, externalError }: Props) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
 
@@ -42,7 +43,9 @@ export default function JoinScreen({ onJoin, onCancel }: Props) {
           autoCapitalize="characters"
           autoFocus
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {(error || externalError) ? (
+          <Text style={styles.error}>{error || externalError}</Text>
+        ) : null}
         <TouchableOpacity style={styles.joinButton} onPress={handleJoin}>
           <Text style={styles.joinText}>Join</Text>
         </TouchableOpacity>

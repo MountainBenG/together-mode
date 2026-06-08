@@ -28,25 +28,29 @@ export async function createSession(playerId: string): Promise<string | null> {
   return code;
 }
 
+export type JoinResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_found' | 'full' | 'network' };
+
 export async function joinSession(
   code: string,
   playerId: string
-): Promise<boolean> {
+): Promise<JoinResult> {
   const { data, error } = await supabase
     .from('sessions')
     .select('id, status, player2_id')
     .eq('code', code.toUpperCase())
     .single();
 
-  if (error || !data) return false;
-  if (data.status !== 'waiting' || data.player2_id) return false;
+  if (error || !data) return { ok: false, reason: 'not_found' };
+  if (data.status !== 'waiting' || data.player2_id) return { ok: false, reason: 'full' };
 
   const { error: updateError } = await supabase
     .from('sessions')
     .update({ player2_id: playerId, status: 'voting' })
     .eq('code', code.toUpperCase());
 
-  return !updateError;
+  return updateError ? { ok: false, reason: 'network' } : { ok: true };
 }
 
 export async function submitVote(

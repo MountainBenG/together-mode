@@ -21,6 +21,7 @@ export default function App() {
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
+  const [joinError, setJoinError] = useState('');
   const [myYesPicks, setMyYesPicks] = useState<Movie[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,13 +62,22 @@ export default function App() {
 
   async function handleJoin(code: string) {
     setLoading(true);
-    const success = await joinSession(code, playerId);
+    setJoinError('');
+    const result = await joinSession(code, playerId);
     setLoading(false);
-    if (success) {
+    if (result.ok) {
       track('session_joined', code, playerId);
       setSessionCode(code);
       setIsPlayer1(false);
       setScreen('voting');
+    } else {
+      if (result.reason === 'not_found') {
+        setJoinError("That code doesn't exist — ask the other person to check.");
+      } else if (result.reason === 'full') {
+        setJoinError('Someone already joined that session.');
+      } else {
+        setJoinError('Something went wrong. Try again.');
+      }
     }
   }
 
@@ -106,7 +116,7 @@ export default function App() {
       <StatusBar style="light" />
       {screen === 'home' && <HomeScreen onStart={handleStart} onJoin={() => setScreen('join')} />}
       {screen === 'code' && <CodeScreen code={sessionCode} onCancel={handleReset} />}
-      {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => setScreen('home')} />}
+      {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}
       {screen === 'voting' && (
         <VotingScreen
           code={sessionCode}
