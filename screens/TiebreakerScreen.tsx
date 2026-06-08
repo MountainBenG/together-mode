@@ -17,7 +17,9 @@ type Props = {
 };
 
 export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks, allMovies, onMatch, onNoMatch }: Props) {
-  const pickList = myYesPicks.length > 0 ? myYesPicks : allMovies.slice(0, 8);
+  const rawPickList = myYesPicks.length > 0 ? myYesPicks : allMovies.slice(0, 8);
+  // Guard duplicate ids so React keys stay unique (no "two children with the same key").
+  const pickList = rawPickList.filter((m, i) => rawPickList.findIndex(x => x.id === m.id) === i);
   const [phase, setPhase] = useState<Phase>('pick');
   const phaseRef = useRef<Phase>('pick');
   const [myPick, setMyPick] = useState<Movie | null>(null);

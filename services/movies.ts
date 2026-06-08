@@ -28,8 +28,15 @@ export async function fetchPopularMovies(): Promise<Movie[]> {
   );
   if (!res.ok) throw new Error(`TMDB error: ${res.status}`);
   const data = await res.json();
+  // Dedupe by id — TMDB's popular list can repeat a movie, which creates duplicate
+  // React keys and shows the same movie twice while voting.
+  const seen = new Set<number>();
   return data.results
-    .filter((m: any) => m.poster_path)
+    .filter((m: any) => {
+      if (!m.poster_path || seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    })
     .map((m: any) => ({
       id: m.id,
       title: m.title,
