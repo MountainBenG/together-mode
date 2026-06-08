@@ -169,6 +169,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
         <Text style={styles.progressText}>Movie {Math.min(movieIndex + 1, TIEBREAKER_AFTER)} of {TIEBREAKER_AFTER}</Text>
       </View>
       <View style={styles.codePill}>
+        <Text style={styles.codePillLabel}>SESSION CODE</Text>
         <Text style={styles.codePillText}>{code}</Text>
       </View>
       <View style={styles.overlay}>
@@ -229,19 +230,28 @@ const styles = StyleSheet.create({
   },
   codePill: {
     position: 'absolute',
-    top: 56,
+    top: 52,
     left: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    backgroundColor: 'rgba(10,10,28,0.75)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(108,99,255,0.4)',
     zIndex: 10,
+    gap: 2,
+  },
+  codePillLabel: {
+    color: '#6c63ff',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   codePillText: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 2,
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 3,
   },
   backgroundImage: {
     position: 'absolute',
