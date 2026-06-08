@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -33,9 +34,13 @@ export default function MatchScreen({ movieTitle, movieImage, onReset }: Props) 
 
   // Open JustWatch's "where to watch" search for the matched movie. JustWatch
   // lists which streaming services actually have it, so the match has somewhere to go.
-  function handleWhereToWatch() {
+  // Open JustWatch in an in-app browser (with a Done button that returns here),
+  // NOT Safari — otherwise the user is stranded with no way back to "Pick something else".
+  async function handleWhereToWatch() {
     const url = `https://www.justwatch.com/us/search?q=${encodeURIComponent(movieTitle)}`;
-    Linking.openURL(url).catch(() => {});
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch {}
   }
 
   return (
