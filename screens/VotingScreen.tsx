@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
   },
   codePillText: {
     color: 'rgba(255,255,255,0.65)',
-    fontSize: 13,
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   backgroundImage: {
     position: 'absolute',
