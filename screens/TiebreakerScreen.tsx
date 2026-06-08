@@ -12,7 +12,7 @@ type Props = {
   isPlayer1: boolean;
   myYesPicks: Movie[];
   allMovies: Movie[];
-  onMatch: (title: string, image?: string) => void;
+  onMatch: (title: string, image?: string, moviesSeen?: number, myYesCount?: number) => void;
   onNoMatch: () => void;
 };
 
@@ -41,7 +41,7 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
     if (session.status === 'matched') {
       const all = [...myYesPicks, ...allMovies];
       const matchedMovie = all.find(m => m.title === session.matched_movie_title);
-      onMatch(session.matched_movie_title, matchedMovie?.image);
+      onMatch(session.matched_movie_title, matchedMovie?.image, 8, myYesPicks.length);
       return;
     }
     const p1 = session.player1_voted as string | null;

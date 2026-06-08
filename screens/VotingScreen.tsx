@@ -18,7 +18,7 @@ type Props = {
   code: string;
   playerId: string;
   isPlayer1: boolean;
-  onMatch: (title: string, image?: string) => void;
+  onMatch: (title: string, image?: string, moviesSeen?: number, myYesCount?: number) => void;
   onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
 };
 
@@ -33,6 +33,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
   const [trailerFailed, setTrailerFailed] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const myYesPicksRef = useRef<Movie[]>([]);
+  const myYesCountRef = useRef(0);
 
   useEffect(() => {
     fetchPopularMovies()
@@ -69,7 +70,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
   function handleSessionUpdate(session: any) {
     if (session.status === 'matched') {
       const matchedMovie = moviesRef.current.find(m => m.title === session.matched_movie_title);
-      onMatch(session.matched_movie_title, matchedMovie?.image);
+      onMatch(session.matched_movie_title, matchedMovie?.image, session.current_movie_index + 1, myYesCountRef.current);
       return;
     }
     if (session.status === 'tiebreaker') {
@@ -106,6 +107,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
     track('vote_cast', code, playerId, { vote, movie: movie?.title });
     if (vote === 'yes' && movie) {
       myYesPicksRef.current = [...myYesPicksRef.current, movie];
+      myYesCountRef.current += 1;
     }
     await submitVote(code, playerId, isPlayer1, vote);
   }

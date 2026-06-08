@@ -91,6 +91,19 @@ export async function clearTiebreakerVotes(code: string): Promise<void> {
     .eq('code', code.toUpperCase());
 }
 
+export async function restartSession(code: string): Promise<void> {
+  await supabase
+    .from('sessions')
+    .update({
+      status: 'voting',
+      current_movie_index: 0,
+      player1_voted: null,
+      player2_voted: null,
+      matched_movie_title: null,
+    })
+    .eq('code', code.toUpperCase());
+}
+
 export async function setTiebreaker(code: string): Promise<void> {
   await supabase
     .from('sessions')

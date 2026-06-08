@@ -21,6 +21,8 @@ export default function App() {
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
+  const [matchMoviesSeen, setMatchMoviesSeen] = useState(0);
+  const [matchMyYesCount, setMatchMyYesCount] = useState(0);
   const [joinError, setJoinError] = useState('');
   const [myYesPicks, setMyYesPicks] = useState<Movie[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
@@ -81,10 +83,22 @@ export default function App() {
     }
   }
 
-  function handleMatch(title: string, image?: string) {
+  function handleMatch(title: string, image?: string, moviesSeen?: number, myYesCount?: number) {
     setMatchedMovie(title);
     setMatchedMovieImage(image ?? '');
+    setMatchMoviesSeen(moviesSeen ?? 0);
+    setMatchMyYesCount(myYesCount ?? 0);
     setScreen('match');
+  }
+
+  function handleRestart() {
+    setMatchedMovie('');
+    setMatchedMovieImage('');
+    setMatchMoviesSeen(0);
+    setMatchMyYesCount(0);
+    setMyYesPicks([]);
+    setAllMovies([]);
+    setScreen('voting');
   }
 
   function handleTiebreaker(yesPicks: Movie[], movies: Movie[]) {
@@ -137,7 +151,17 @@ export default function App() {
           onNoMatch={handleReset}
         />
       )}
-      {screen === 'match' && <MatchScreen movieTitle={matchedMovie} movieImage={matchedMovieImage} onReset={handleReset} />}
+      {screen === 'match' && (
+        <MatchScreen
+          code={sessionCode}
+          movieTitle={matchedMovie}
+          movieImage={matchedMovieImage}
+          moviesSeen={matchMoviesSeen}
+          myYesCount={matchMyYesCount}
+          onRestart={handleRestart}
+          onReset={handleReset}
+        />
+      )}
     </>
   );
 }
