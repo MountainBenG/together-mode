@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { setMatched, submitVote, subscribeToSession } from '../services/sessions';
+import { clearTiebreakerVotes, setMatched, submitVote, subscribeToSession } from '../services/sessions';
 import { track } from '../services/analytics';
 import { Movie } from '../services/movies';
 
-type Phase = 'pick' | 'faceoff' | 'done';
+type Phase = 'pick' | 'faceoff';
 
 type Props = {
   code: string;
@@ -16,48 +16,55 @@ type Props = {
 
 export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks, onMatch }: Props) {
   const [phase, setPhase] = useState<Phase>('pick');
+  const phaseRef = useRef<Phase>('pick');
   const [myPick, setMyPick] = useState<Movie | null>(null);
   const [theirPickTitle, setTheirPickTitle] = useState<string | null>(null);
   const [voted, setVoted] = useState(false);
-  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
-    subscriptionRef.current = subscribeToSession(code, handleSessionUpdate);
-    return () => subscriptionRef.current?.unsubscribe();
+    const sub = subscribeToSession(code, handleSessionUpdate);
+    return () => { sub.unsubscribe(); };
   }, [code]);
+
+  function enterFaceoff(theirTitle: string) {
+    phaseRef.current = 'faceoff';
+    setTheirPickTitle(theirTitle);
+    setVoted(false);
+    setPhase('faceoff');
+    clearTiebreakerVotes(code);
+  }
 
   function handleSessionUpdate(session: any) {
     if (session.status === 'matched') {
       onMatch(session.matched_movie_title);
       return;
     }
-    const p1 = session.player1_voted;
-    const p2 = session.player2_voted;
+    const p1 = session.player1_voted as string | null;
+    const p2 = session.player2_voted as string | null;
     if (!p1 || !p2) return;
 
-    if (phase === 'pick') {
+    if (phaseRef.current === 'pick') {
       if (p1 === p2) {
         setMatched(code, p1);
       } else {
-        setTheirPickTitle(isPlayer1 ? p2 : p1);
-        setVoted(false);
-        setPhase('faceoff');
+        enterFaceoff(isPlayer1 ? p2 : p1);
       }
-    } else if (phase === 'faceoff') {
-      const myVote = isPlayer1 ? p1 : p2;
-      const theirVote = isPlayer1 ? p2 : p1;
-      if (myVote && theirVote) {
-        // They agree on one of the two options, or we just pick the most popular
-        const winner = myVote === theirVote ? myVote : (Math.random() < 0.5 ? myVote : theirVote);
-        setMatched(code, winner);
-      }
+    } else if (phaseRef.current === 'faceoff') {
+      const winner = p1 === p2 ? p1 : Math.random() < 0.5 ? p1 : p2;
+      setMatched(code, winner);
     }
   }
 
   async function handlePick(movie: Movie) {
+    if (myPick) return;
     setMyPick(movie);
     track('tiebreaker_pick_submitted', code, playerId, { movie: movie.title });
     await submitVote(code, playerId, isPlayer1, movie.title as any);
+  }
+
+  async function handlePickRandom() {
+    const dummy: Movie = { id: 0, title: 'Surprise Pick', year: '', overview: '', image: '' };
+    await handlePick(dummy);
   }
 
   async function handleFaceoffVote(title: string) {
@@ -72,20 +79,26 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
         <View style={styles.header}>
           <Text style={styles.emoji}>🎬</Text>
           <Text style={styles.title}>Tiebreaker!</Text>
-          <Text style={styles.subtitle}>No match after 8 movies. Pick your favorite one you liked.</Text>
+          <Text style={styles.subtitle}>8 movies, no match. Pick your favorite one you said yes to.</Text>
         </View>
+
         {myYesPicks.length === 0 ? (
           <View style={styles.noPicks}>
             <Text style={styles.noPicksText}>You didn't vote yes on anything…</Text>
-            <Text style={styles.noPicksSub}>Tap below and a random movie will be chosen for you.</Text>
-            <TouchableOpacity style={styles.randomButton} onPress={() => handlePick({ id: 0, title: 'Surprise Pick', year: '', overview: '', image: '' })}>
-              <Text style={styles.randomButtonText}>Pick for me</Text>
+            <Text style={styles.noPicksSub}>A random movie will be picked for you.</Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={handlePickRandom} disabled={!!myPick}>
+              <Text style={styles.primaryButtonText}>Pick for me</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.pickList}>
+          <ScrollView contentContainerStyle={styles.pickList} showsVerticalScrollIndicator={false}>
             {myYesPicks.map((movie) => (
-              <TouchableOpacity key={movie.id} style={styles.movieCard} onPress={() => handlePick(movie)}>
+              <TouchableOpacity
+                key={movie.id}
+                style={[styles.movieCard, myPick?.id === movie.id && styles.movieCardSelected]}
+                onPress={() => handlePick(movie)}
+                disabled={!!myPick}
+              >
                 {movie.image ? (
                   <Image source={{ uri: movie.image }} style={styles.movieThumb} resizeMode="cover" />
                 ) : null}
@@ -93,13 +106,18 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
                   <Text style={styles.movieTitle}>{movie.title}</Text>
                   <Text style={styles.movieYear}>{movie.year}</Text>
                 </View>
-                <Text style={styles.pickArrow}>→</Text>
+                {myPick?.id === movie.id ? (
+                  <Text style={styles.checkmark}>✓</Text>
+                ) : (
+                  <Text style={styles.pickArrow}>→</Text>
+                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
         )}
+
         {myPick && (
-          <View style={styles.waiting}>
+          <View style={styles.waitingRow}>
             <Text style={styles.waitingText}>Waiting for the other person…</Text>
           </View>
         )}
@@ -107,33 +125,34 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
     );
   }
 
-  if (phase === 'faceoff') {
-    const options = [myPick?.title, theirPickTitle].filter(Boolean) as string[];
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.emoji}>⚡</Text>
-          <Text style={styles.title}>Final Round</Text>
-          <Text style={styles.subtitle}>Your picks didn't match. One last vote — which one?</Text>
-        </View>
-        <View style={styles.faceoffButtons}>
-          {options.map((title) => (
-            <TouchableOpacity
-              key={title}
-              style={[styles.faceoffCard, voted && styles.dimmed]}
-              onPress={() => handleFaceoffVote(title)}
-              disabled={voted}
-            >
-              <Text style={styles.faceoffTitle}>{title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {voted && <Text style={styles.waitingText}>Waiting for the other person…</Text>}
-      </View>
-    );
-  }
+  const faceoffOptions = [myPick?.title, theirPickTitle].filter(Boolean) as string[];
 
-  return null;
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.emoji}>⚡</Text>
+        <Text style={styles.title}>Final Round</Text>
+        <Text style={styles.subtitle}>Your picks didn't match. One last vote — which one?</Text>
+      </View>
+      <View style={styles.faceoffList}>
+        {faceoffOptions.map((title) => (
+          <TouchableOpacity
+            key={title}
+            style={[styles.faceoffCard, voted && styles.dimmed]}
+            onPress={() => handleFaceoffVote(title)}
+            disabled={voted}
+          >
+            <Text style={styles.faceoffTitle}>{title}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {voted && (
+        <View style={styles.waitingRow}>
+          <Text style={styles.waitingText}>Waiting for the other person…</Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -176,7 +195,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2a2a4a',
     overflow: 'hidden',
-    gap: 14,
+  },
+  movieCardSelected: {
+    borderColor: '#6c63ff',
+    backgroundColor: '#1e1e4a',
   },
   movieThumb: {
     width: 64,
@@ -185,6 +207,7 @@ const styles = StyleSheet.create({
   movieInfo: {
     flex: 1,
     paddingVertical: 16,
+    paddingLeft: 14,
     gap: 4,
   },
   movieTitle: {
@@ -201,11 +224,17 @@ const styles = StyleSheet.create({
     color: '#6c63ff',
     paddingRight: 16,
   },
+  checkmark: {
+    fontSize: 20,
+    color: '#44ff88',
+    paddingRight: 16,
+    fontWeight: '700',
+  },
   noPicks: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 14,
   },
   noPicksText: {
     fontSize: 18,
@@ -217,19 +246,19 @@ const styles = StyleSheet.create({
     color: '#8888aa',
     textAlign: 'center',
   },
-  randomButton: {
-    marginTop: 12,
+  primaryButton: {
+    marginTop: 8,
     backgroundColor: '#6c63ff',
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 14,
   },
-  randomButtonText: {
+  primaryButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
   },
-  waiting: {
+  waitingRow: {
     alignItems: 'center',
     paddingTop: 20,
   },
@@ -237,9 +266,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6c63ff',
   },
-  faceoffButtons: {
-    gap: 16,
+  faceoffList: {
     flex: 1,
+    gap: 16,
     justifyContent: 'center',
   },
   faceoffCard: {
