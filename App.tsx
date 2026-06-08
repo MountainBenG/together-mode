@@ -20,6 +20,7 @@ export default function App() {
   const [sessionCode, setSessionCode] = useState('');
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState('');
+  const [matchedMovieImage, setMatchedMovieImage] = useState('');
   const [myYesPicks, setMyYesPicks] = useState<Movie[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,8 +71,9 @@ export default function App() {
     }
   }
 
-  function handleMatch(title: string) {
+  function handleMatch(title: string, image?: string) {
     setMatchedMovie(title);
+    setMatchedMovieImage(image ?? '');
     setScreen('match');
   }
 
@@ -85,6 +87,7 @@ export default function App() {
     setScreen('home');
     setSessionCode('');
     setMatchedMovie('');
+    setMatchedMovieImage('');
     setMyYesPicks([]);
     setAllMovies([]);
   }
@@ -124,7 +127,7 @@ export default function App() {
           onNoMatch={handleReset}
         />
       )}
-      {screen === 'match' && <MatchScreen movieTitle={matchedMovie} onReset={handleReset} />}
+      {screen === 'match' && <MatchScreen movieTitle={matchedMovie} movieImage={matchedMovieImage} onReset={handleReset} />}
     </>
   );
 }

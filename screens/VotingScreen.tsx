@@ -9,11 +9,16 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const TIEBREAKER_AFTER = 8;
 
+// Trailers are OFF for now: YouTube systematically refuses to embed in the iOS
+// WebView (error 152/153, every video). The poster is the shipped experience.
+// Flip to true once a working embed (react-native-youtube-iframe / a proxy) is in.
+const TRAILERS_ENABLED = false;
+
 type Props = {
   code: string;
   playerId: string;
   isPlayer1: boolean;
-  onMatch: (title: string) => void;
+  onMatch: (title: string, image?: string) => void;
   onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
 };
 
@@ -25,6 +30,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
   const [loading, setLoading] = useState(true);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
+  const [trailerFailed, setTrailerFailed] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const myYesPicksRef = useRef<Movie[]>([]);
 
@@ -47,10 +53,11 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
   // Auto-fetch + autoplay the trailer whenever the current movie changes.
   // Falls back to the poster while loading or if the movie has no trailer.
   useEffect(() => {
-    if (movies.length === 0) return;
+    if (movies.length === 0 || !TRAILERS_ENABLED) return;
     let cancelled = false;
     setTrailerKey(null);
     setMuted(true);
+    setTrailerFailed(false);
     fetchTrailerKey(movies[movieIndex % movies.length].id).then(key => {
       if (!cancelled) setTrailerKey(key);
     });
@@ -61,7 +68,8 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
 
   function handleSessionUpdate(session: any) {
     if (session.status === 'matched') {
-      onMatch(session.matched_movie_title);
+      const matchedMovie = moviesRef.current.find(m => m.title === session.matched_movie_title);
+      onMatch(session.matched_movie_title, matchedMovie?.image);
       return;
     }
     if (session.status === 'tiebreaker') {
@@ -121,18 +129,14 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
 
   const movie = movies[movieIndex % movies.length];
 
-  // Embed YouTube inside an HTML <iframe> with a real baseUrl + referrerpolicy,
-  // instead of pointing the WebView straight at the embed URL. iOS WebViews don't
-  // send the Referer header YouTube requires for a bare-URL load, which triggers
-  // "Error 153 — video player configuration error". A real origin fixes it.
-  const embedUrl = trailerKey
-    ? `https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&mute=${muted ? 1 : 0}&playsinline=1&controls=0&rel=0&modestbranding=1`
-    : '';
-  const trailerHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html,body{margin:0;padding:0;height:100%;background:#0f0f23;overflow:hidden}iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}</style></head><body><iframe src="${embedUrl}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></body></html>`;
+  // Load the trailer through YouTube's IFrame Player API (not a bare embed URL),
+  // so we can catch playback failures (onError) and fall back to the poster — and
+  // log the real error code, which tells us WHY a given trailer won't embed.
+  const trailerHtml = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>html,body{margin:0;padding:0;height:100%;background:#0f0f23;overflow:hidden}#player{position:absolute;top:0;left:0;width:100%;height:100%}</style></head><body><div id="player"></div><script>function post(m){if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify(m));}}var s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.body.appendChild(s);var player;function onYouTubeIframeAPIReady(){player=new YT.Player('player',{videoId:'${trailerKey ?? ''}',playerVars:{autoplay:1,mute:${muted ? 1 : 0},playsinline:1,controls:0,rel:0,modestbranding:1},events:{onReady:function(e){try{e.target.playVideo();}catch(err){}post({type:'ready'});},onError:function(e){post({type:'error',code:e.data});}}});}</script></body></html>`;
 
   return (
     <View style={styles.container}>
-      {trailerKey ? (
+      {trailerKey && !trailerFailed ? (
         <WebView
           source={{ html: trailerHtml, baseUrl: 'https://www.youtube.com' }}
           originWhitelist={['*']}
@@ -140,6 +144,15 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           allowsFullscreenVideo={false}
+          onMessage={(e) => {
+            try {
+              const m = JSON.parse(e.nativeEvent.data);
+              if (m.type === 'error') {
+                console.log('[trailer] YouTube embed error code', m.code, 'for', movie.title);
+                setTrailerFailed(true);
+              }
+            } catch {}
+          }}
         />
       ) : (
         <Image source={{ uri: movie.image }} style={styles.backgroundImage} resizeMode="cover" />

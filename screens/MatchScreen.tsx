@@ -1,16 +1,19 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type Props = {
   movieTitle: string;
+  movieImage?: string;
   onReset: () => void;
 };
 
-export default function MatchScreen({ movieTitle, onReset }: Props) {
+export default function MatchScreen({ movieTitle, movieImage, onReset }: Props) {
   const emojiScale = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
-  const contentY = useRef(new Animated.Value(24)).current;
-  const glowScale = useRef(new Animated.Value(0.6)).current;
+  const contentY = useRef(new Animated.Value(28)).current;
+  const glowScale = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     Animated.sequence([
@@ -21,18 +24,27 @@ export default function MatchScreen({ movieTitle, onReset }: Props) {
         useNativeDriver: true,
       }),
       Animated.parallel([
-        Animated.timing(contentOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(contentY, { toValue: 0, duration: 350, useNativeDriver: true }),
-        Animated.timing(glowScale, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(contentOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(contentY, { toValue: 0, duration: 400, useNativeDriver: true }),
+        Animated.timing(glowScale, { toValue: 1, duration: 700, useNativeDriver: true }),
       ]),
     ]).start();
   }, []);
 
   return (
     <View style={styles.container}>
+      {movieImage ? (
+        <Image source={{ uri: movieImage }} style={styles.poster} resizeMode="cover" />
+      ) : null}
+
+      {/* Dark gradient overlay so text is always readable */}
+      <View style={styles.overlay} />
+
+      {/* Glow rings — sit on top of overlay, behind content */}
+      <Animated.View style={[styles.glowOuter, { transform: [{ scale: glowScale }] }]} />
+      <Animated.View style={[styles.glowInner, { transform: [{ scale: glowScale }] }]} />
+
       <View style={styles.centerContent}>
-        <Animated.View style={[styles.glowOuter, { transform: [{ scale: glowScale }] }]} />
-        <Animated.View style={[styles.glowInner, { transform: [{ scale: glowScale }] }]} />
         <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
           🎬
         </Animated.Text>
@@ -42,6 +54,7 @@ export default function MatchScreen({ movieTitle, onReset }: Props) {
           <Text style={styles.sub}>You both said yes.</Text>
         </Animated.View>
       </View>
+
       <View style={styles.actions}>
         <TouchableOpacity style={styles.watchButton} activeOpacity={0.85}>
           <Text style={styles.watchButtonText}>▶  Start watching</Text>
@@ -64,26 +77,44 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
     paddingHorizontal: 32,
   },
+  poster: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    backgroundColor: 'rgba(10, 10, 28, 0.72)',
+  },
+  glowOuter: {
+    position: 'absolute',
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    backgroundColor: '#6c63ff',
+    opacity: 0.10,
+    top: SCREEN_HEIGHT / 2 - 170,
+  },
+  glowInner: {
+    position: 'absolute',
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: '#6c63ff',
+    opacity: 0.16,
+    top: SCREEN_HEIGHT / 2 - 95,
+  },
   centerContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glowOuter: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: '#6c63ff',
-    opacity: 0.07,
-  },
-  glowInner: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#6c63ff',
-    opacity: 0.13,
+    gap: 0,
   },
   emoji: {
     fontSize: 80,
@@ -100,14 +131,15 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
   },
   movieTitle: {
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#6c63ff',
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
   sub: {
     fontSize: 15,
-    color: '#8888aa',
+    color: 'rgba(255,255,255,0.6)',
     marginTop: 4,
   },
   actions: {
@@ -132,7 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   againButtonText: {
-    color: '#8888aa',
+    color: 'rgba(255,255,255,0.45)',
     fontSize: 16,
   },
 });
