@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -6,19 +7,24 @@ import { createSession, joinSession, subscribeToSession } from './services/sessi
 import { track } from './services/analytics';
 import { Movie } from './services/movies';
 import CodeScreen from './screens/CodeScreen';
+import GenreScreen from './screens/GenreScreen';
 import HomeScreen from './screens/HomeScreen';
 import JoinScreen from './screens/JoinScreen';
 import MatchScreen from './screens/MatchScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 import TiebreakerScreen from './screens/TiebreakerScreen';
 import VotingScreen from './screens/VotingScreen';
 
-type Screen = 'home' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match';
+type Screen = 'onboarding' | 'home' | 'genre' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match';
+
+const ONBOARDING_KEY = '@together_mode_onboarding_seen';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [playerId, setPlayerId] = useState('');
   const [sessionCode, setSessionCode] = useState('');
   const [isPlayer1, setIsPlayer1] = useState(false);
+  const [genreId, setGenreId] = useState<number | null>(null);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
   const [matchMoviesSeen, setMatchMoviesSeen] = useState(0);
@@ -30,11 +36,20 @@ export default function App() {
   const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
-    getPlayerId().then((id) => {
+    Promise.all([
+      getPlayerId(),
+      AsyncStorage.getItem(ONBOARDING_KEY),
+    ]).then(([id, seen]) => {
       setPlayerId(id);
+      setScreen(seen ? 'home' : 'onboarding');
       setLoading(false);
     });
   }, []);
+
+  async function handleOnboardingDone() {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    setScreen('home');
+  }
 
   // Player 1: wait for player 2 to join
   useEffect(() => {
@@ -50,9 +65,10 @@ export default function App() {
     };
   }, [screen, sessionCode]);
 
-  async function handleStart() {
+  async function handleGenreSelect(selectedGenreId: number | null) {
     setLoading(true);
-    const code = await createSession(playerId);
+    setGenreId(selectedGenreId);
+    const code = await createSession(playerId, selectedGenreId);
     setLoading(false);
     if (code) {
       track('session_started', code, playerId);
@@ -70,6 +86,7 @@ export default function App() {
     if (result.ok) {
       track('session_joined', code, playerId);
       setSessionCode(code);
+      setGenreId(result.genreId);
       setIsPlayer1(false);
       setScreen('voting');
     } else {
@@ -110,6 +127,7 @@ export default function App() {
   function handleReset() {
     setScreen('home');
     setSessionCode('');
+    setGenreId(null);
     setMatchedMovie('');
     setMatchedMovieImage('');
     setMyYesPicks([]);
@@ -128,7 +146,9 @@ export default function App() {
   return (
     <>
       <StatusBar style="light" />
-      {screen === 'home' && <HomeScreen onStart={handleStart} onJoin={() => setScreen('join')} />}
+      {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
+      {screen === 'home' && <HomeScreen onStart={() => setScreen('genre')} onJoin={() => setScreen('join')} />}
+      {screen === 'genre' && <GenreScreen onSelect={handleGenreSelect} />}
       {screen === 'code' && <CodeScreen code={sessionCode} onCancel={handleReset} />}
       {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}
       {screen === 'voting' && (
@@ -136,6 +156,7 @@ export default function App() {
           code={sessionCode}
           playerId={playerId}
           isPlayer1={isPlayer1}
+          genreId={genreId}
           onMatch={handleMatch}
           onTiebreaker={handleTiebreaker}
         />

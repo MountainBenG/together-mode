@@ -19,11 +19,12 @@ type Props = {
   code: string;
   playerId: string;
   isPlayer1: boolean;
+  genreId?: number | null;
   onMatch: (title: string, image?: string, moviesSeen?: number, myYesCount?: number) => void;
   onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
 };
 
-export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTiebreaker }: Props) {
+export default function VotingScreen({ code, playerId, isPlayer1, genreId, onMatch, onTiebreaker }: Props) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const moviesRef = useRef<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
@@ -37,7 +38,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
   const myYesCountRef = useRef(0);
 
   useEffect(() => {
-    fetchPopularMovies()
+    fetchPopularMovies(genreId)
       .then(data => {
         moviesRef.current = data;
         setMovies(data);

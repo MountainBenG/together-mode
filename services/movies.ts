@@ -10,6 +10,27 @@ export type Movie = {
   image: string;
 };
 
+export type Genre = {
+  id: number;
+  name: string;
+  emoji: string;
+};
+
+export const GENRES: Genre[] = [
+  { id: 28,    name: 'Action',    emoji: '💥' },
+  { id: 35,    name: 'Comedy',    emoji: '😂' },
+  { id: 27,    name: 'Horror',    emoji: '👻' },
+  { id: 10749, name: 'Romance',   emoji: '❤️' },
+  { id: 878,   name: 'Sci-Fi',    emoji: '🚀' },
+  { id: 16,    name: 'Animation', emoji: '🎨' },
+  { id: 53,    name: 'Thriller',  emoji: '😱' },
+  { id: 18,    name: 'Drama',     emoji: '🎭' },
+  { id: 80,    name: 'Crime',     emoji: '🔍' },
+  { id: 12,    name: 'Adventure', emoji: '🗺️' },
+  { id: 14,    name: 'Fantasy',   emoji: '✨' },
+  { id: 10751, name: 'Family',    emoji: '👨‍👩‍👧' },
+];
+
 export async function fetchTrailerKey(movieId: number): Promise<string | null> {
   const res = await fetch(
     `${TMDB_BASE}/movie/${movieId}/videos?api_key=${API_KEY}&language=en-US`
@@ -22,16 +43,8 @@ export async function fetchTrailerKey(movieId: number): Promise<string | null> {
   return trailer?.key ?? null;
 }
 
-export async function fetchPopularMovies(): Promise<Movie[]> {
-  const res = await fetch(
-    `${TMDB_BASE}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`
-  );
-  if (!res.ok) throw new Error(`TMDB error: ${res.status}`);
-  const data = await res.json();
-  // Dedupe by id — TMDB's popular list can repeat a movie, which creates duplicate
-  // React keys and shows the same movie twice while voting.
-  const seen = new Set<number>();
-  return data.results
+function parseResults(results: any[], seen: Set<number>): Movie[] {
+  return (results ?? [])
     .filter((m: any) => {
       if (!m.poster_path || seen.has(m.id)) return false;
       seen.add(m.id);
@@ -46,9 +59,29 @@ export async function fetchPopularMovies(): Promise<Movie[]> {
     }));
 }
 
-// Like fetchPopularMovies, but only movies rated `maxCert` (US) or lower —
-// e.g. maxCert "PG-13" returns G/PG/PG-13. Used only when the age filter is on;
-// fetchPopularMovies stays the untouched default.
+// Without a genreId: mixes popular + trending for variety.
+// With a genreId: fetches two pages of that genre sorted by popularity.
+export async function fetchPopularMovies(genreId?: number | null): Promise<Movie[]> {
+  const seen = new Set<number>();
+
+  if (genreId) {
+    const [r1, r2] = await Promise.all([
+      fetch(`${TMDB_BASE}/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=1`),
+      fetch(`${TMDB_BASE}/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=2`),
+    ]);
+    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+    return [...parseResults(d1.results, seen), ...parseResults(d2.results, seen)];
+  }
+
+  const [popularRes, trendingRes] = await Promise.all([
+    fetch(`${TMDB_BASE}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`),
+    fetch(`${TMDB_BASE}/trending/movie/week?api_key=${API_KEY}&language=en-US`),
+  ]);
+  if (!popularRes.ok) throw new Error(`TMDB error: ${popularRes.status}`);
+  const [popular, trending] = await Promise.all([popularRes.json(), trendingRes.json()]);
+  return [...parseResults(popular.results, seen), ...parseResults(trending.results, seen)];
+}
+
 export async function fetchMoviesByCertification(maxCert: string): Promise<Movie[]> {
   const res = await fetch(
     `${TMDB_BASE}/discover/movie?api_key=${API_KEY}&language=en-US&page=1&sort_by=popularity.desc&certification_country=US&certification.lte=${encodeURIComponent(maxCert)}`
@@ -56,17 +89,5 @@ export async function fetchMoviesByCertification(maxCert: string): Promise<Movie
   if (!res.ok) throw new Error(`TMDB error: ${res.status}`);
   const data = await res.json();
   const seen = new Set<number>();
-  return data.results
-    .filter((m: any) => {
-      if (!m.poster_path || seen.has(m.id)) return false;
-      seen.add(m.id);
-      return true;
-    })
-    .map((m: any) => ({
-      id: m.id,
-      title: m.title,
-      year: m.release_date?.substring(0, 4) ?? '',
-      overview: m.overview,
-      image: `${TMDB_IMG}${m.poster_path}`,
-    }));
+  return parseResults(data.results, seen);
 }

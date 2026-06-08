@@ -4,22 +4,13 @@ function generateCode(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-export async function createSession(playerId: string): Promise<string | null> {
-  try {
-    const r = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/sessions`, {
-      method: 'HEAD',
-      headers: { apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY! },
-    });
-    console.log('Raw fetch status:', r.status);
-  } catch (e: any) {
-    console.error('Raw fetch error:', e.message);
-  }
-
+export async function createSession(playerId: string, genreId?: number | null): Promise<string | null> {
   const code = generateCode();
   const { error } = await supabase.from('sessions').insert({
     code,
     player1_id: playerId,
     status: 'waiting',
+    ...(genreId ? { genre_id: genreId } : {}),
   });
   if (error) {
     console.error('createSession error:', error.message);
@@ -29,7 +20,7 @@ export async function createSession(playerId: string): Promise<string | null> {
 }
 
 export type JoinResult =
-  | { ok: true }
+  | { ok: true; genreId: number | null }
   | { ok: false; reason: 'not_found' | 'full' | 'network' };
 
 export async function joinSession(
@@ -38,7 +29,7 @@ export async function joinSession(
 ): Promise<JoinResult> {
   const { data, error } = await supabase
     .from('sessions')
-    .select('id, status, player2_id')
+    .select('id, status, player2_id, genre_id')
     .eq('code', code.toUpperCase())
     .single();
 
@@ -50,7 +41,7 @@ export async function joinSession(
     .update({ player2_id: playerId, status: 'voting' })
     .eq('code', code.toUpperCase());
 
-  return updateError ? { ok: false, reason: 'network' } : { ok: true };
+  return updateError ? { ok: false, reason: 'network' } : { ok: true, genreId: data.genre_id ?? null };
 }
 
 export async function submitVote(
