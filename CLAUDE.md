@@ -42,7 +42,9 @@ Two phones drive one shared **session row** in Supabase Postgres. The entire app
 **Single source of truth — the `sessions` row** (inferred schema; columns used by `services/sessions.ts`):
 `id`, `code`, `player1_id`, `player2_id`, `status`, `player1_voted`, `player2_voted`, `current_movie_index`, `matched_movie_title`.
 
-**Status lifecycle:** `waiting` → `voting` → `matched`. Player 1 `createSession` inserts a `waiting` row with a random 4-char `code`; Player 2 `joinSession` finds it by code and flips it to `voting`.
+**Status lifecycle:** `waiting` → `voting` → `matched`. Player 1 `createSession` inserts a `waiting` row with a random 4-char `code`; Player 2 `joinSession` finds it by code and flips it to `voting`. The insert sets only `code`/`player1_id`/`status`, so `current_movie_index` and the `*_voted` columns rely on DB-side defaults (index `0`, votes `null`) — those defaults are part of the contract, not set by the client.
+
+**Entry point** is `index.ts` (package.json `main`), which calls `registerRootComponent(App)`; `App.tsx` is not loaded directly. New Architecture is enabled (`app.json` `newArchEnabled: true`) — verify any native module against it.
 
 **Screen navigation lives in `App.tsx`**, not a navigation library — a `screen` state variable conditionally renders one of five screens (`home`/`code`/`join`/`voting`/`match`). Transitions are driven by callbacks (`handleStart`, `handleJoin`, `handleMatch`, `handleReset`) and by realtime updates.
 
@@ -55,6 +57,8 @@ Two phones drive one shared **session row** in Supabase Postgres. The entire app
 - both voted but not both `yes` → `advanceMovie` (bumps `current_movie_index` mod catalog length, clears both votes)
 
 Because both clients react to the same update, these writes are issued redundantly by both phones — this is idempotent enough to work but is a race-prone design; account for it before adding voting logic.
+
+The `VotingScreen` subscription effect depends only on `[code]`, so `handleSessionUpdate` closes over a stale `movieIndex` for the session's lifetime. It currently works because the handler reads `session.current_movie_index` from the payload rather than the captured state — preserve that pattern (drive decisions off the payload, not closed-over state) when editing the handler.
 
 **Movie catalog is hardcoded** as the `MOVIES` array in `VotingScreen.tsx`. The matched movie's title is looked up by `current_movie_index` and persisted into the row, so a movie is identified by its index — keep the array stable.
 
