@@ -32,7 +32,6 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
   const [trailerFailed, setTrailerFailed] = useState(false);
-  const [showCode, setShowCode] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const myYesPicksRef = useRef<Movie[]>([]);
   const myYesCountRef = useRef(0);
@@ -105,9 +104,9 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
     if (voted) return;
     setVoted(true);
     if (vote === 'yes') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     const currentMovies = moviesRef.current;
     const movie = currentMovies[movieIndex % currentMovies.length];
@@ -169,16 +168,9 @@ export default function VotingScreen({ code, playerId, isPlayer1, onMatch, onTie
       <View style={styles.progressPill}>
         <Text style={styles.progressText}>Movie {Math.min(movieIndex + 1, TIEBREAKER_AFTER)} of {TIEBREAKER_AFTER}</Text>
       </View>
-      <TouchableOpacity style={styles.codePill} onPress={() => setShowCode(s => !s)} activeOpacity={0.7}>
-        <Text style={styles.codePillText}>{showCode ? code : '# code'}</Text>
-      </TouchableOpacity>
-      {showCode && (
-        <View style={styles.codeOverlay}>
-          <Text style={styles.codeOverlayLabel}>Session code</Text>
-          <Text style={styles.codeOverlayCode}>{code}</Text>
-          <Text style={styles.codeOverlaySub}>Share this if the other person gets disconnected</Text>
-        </View>
-      )}
+      <View style={styles.codePill}>
+        <Text style={styles.codePillText}>{code}</Text>
+      </View>
       <View style={styles.overlay}>
         <View style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
@@ -246,40 +238,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   codePillText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  codeOverlay: {
-    position: 'absolute',
-    top: 90,
-    left: 20,
-    backgroundColor: 'rgba(15,15,35,0.95)',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#2a2a4a',
-    zIndex: 20,
-    gap: 4,
-  },
-  codeOverlayLabel: {
-    fontSize: 11,
-    color: '#6c63ff',
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  codeOverlayCode: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 4,
-  },
-  codeOverlaySub: {
-    fontSize: 11,
-    color: '#555577',
-    marginTop: 2,
+    letterSpacing: 1.5,
   },
   backgroundImage: {
     position: 'absolute',
