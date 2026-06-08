@@ -4,7 +4,7 @@ import { clearTiebreakerVotes, setMatched, submitVote, subscribeToSession } from
 import { track } from '../services/analytics';
 import { Movie } from '../services/movies';
 
-type Phase = 'pick' | 'faceoff';
+type Phase = 'pick' | 'faceoff' | 'nomatch';
 
 type Props = {
   code: string;
@@ -13,9 +13,10 @@ type Props = {
   myYesPicks: Movie[];
   allMovies: Movie[];
   onMatch: (title: string) => void;
+  onNoMatch: () => void;
 };
 
-export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks, allMovies, onMatch }: Props) {
+export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks, allMovies, onMatch, onNoMatch }: Props) {
   const pickList = myYesPicks.length > 0 ? myYesPicks : allMovies.slice(0, 8);
   const [phase, setPhase] = useState<Phase>('pick');
   const phaseRef = useRef<Phase>('pick');
@@ -52,8 +53,12 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
         enterFaceoff(isPlayer1 ? p2 : p1);
       }
     } else if (phaseRef.current === 'faceoff') {
-      const winner = p1 === p2 ? p1 : Math.random() < 0.5 ? p1 : p2;
-      setMatched(code, winner);
+      if (p1 === p2) {
+        setMatched(code, p1);
+      } else {
+        phaseRef.current = 'nomatch';
+        setPhase('nomatch');
+      }
     }
   }
 
@@ -111,6 +116,21 @@ export default function TiebreakerScreen({ code, playerId, isPlayer1, myYesPicks
             <Text style={styles.waitingText}>Waiting for the other person…</Text>
           </View>
         )}
+      </View>
+    );
+  }
+
+  if (phase === 'nomatch') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.noMatchContent}>
+          <Text style={styles.noMatchEmoji}>🤷</Text>
+          <Text style={styles.title}>No Match</Text>
+          <Text style={styles.subtitle}>You two couldn't agree on anything.{'\n'}Maybe try again another night.</Text>
+          <TouchableOpacity style={styles.resetButton} onPress={onNoMatch}>
+            <Text style={styles.resetButtonText}>Start over</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -255,5 +275,26 @@ const styles = StyleSheet.create({
   },
   dimmed: {
     opacity: 0.4,
+  },
+  noMatchContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  noMatchEmoji: {
+    fontSize: 64,
+  },
+  resetButton: {
+    marginTop: 16,
+    backgroundColor: '#6c63ff',
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 14,
+  },
+  resetButtonText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '700',
   },
 });

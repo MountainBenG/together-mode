@@ -121,6 +121,7 @@ export default function App() {
           myYesPicks={myYesPicks}
           allMovies={allMovies}
           onMatch={handleMatch}
+          onNoMatch={handleReset}
         />
       )}
       {screen === 'match' && <MatchScreen movieTitle={matchedMovie} onReset={handleReset} />}
