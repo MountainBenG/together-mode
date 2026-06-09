@@ -191,10 +191,23 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
             </TouchableOpacity>
           )}
           {voted && <Text style={styles.waiting}>Waiting for the other person…</Text>}
+          {VOICE_ENABLED && voice.transcript !== '' && !voted && (
+            <Text style={styles.voiceTranscript}>"{voice.transcript}"</Text>
+          )}
           <View style={styles.buttons}>
             <TouchableOpacity style={[styles.noButton, voted && styles.dimmed]} onPress={() => handleVote('no')} disabled={voted}>
               <Text style={styles.noText}>✕</Text>
             </TouchableOpacity>
+            {VOICE_ENABLED && (
+              <TouchableOpacity
+                style={[styles.micButton, voice.listening && styles.micButtonActive, voted && styles.dimmed]}
+                onPressIn={voice.startListening}
+                onPressOut={voice.stopListening}
+                disabled={voted}
+              >
+                <Text style={styles.micText}>{voice.listening ? '🔴' : '🎤'}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={[styles.yesButton, voted && styles.dimmed]} onPress={() => handleVote('yes')} disabled={voted}>
               <Text style={styles.yesText}>✓</Text>
             </TouchableOpacity>
@@ -285,10 +298,14 @@ const styles = StyleSheet.create({
   waiting: { fontSize: 13, color: '#6c63ff' },
   trailerButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   trailerButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
-  buttons: { flexDirection: 'row', gap: 20, marginTop: 16 },
+  buttons: { flexDirection: 'row', gap: 20, marginTop: 16, alignItems: 'center' },
   noButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(42,26,26,0.85)', borderWidth: 2, borderColor: '#ff4455', alignItems: 'center', justifyContent: 'center' },
   noText: { fontSize: 32, color: '#ff4455' },
   yesButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(26,42,26,0.85)', borderWidth: 2, borderColor: '#44ff88', alignItems: 'center', justifyContent: 'center' },
   yesText: { fontSize: 32, color: '#44ff88' },
+  micButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(108,99,255,0.2)', borderWidth: 2, borderColor: '#6c63ff', alignItems: 'center', justifyContent: 'center' },
+  micButtonActive: { backgroundColor: 'rgba(108,99,255,0.5)', borderColor: '#ffffff' },
+  micText: { fontSize: 22 },
+  voiceTranscript: { fontSize: 13, color: '#6c63ff', fontStyle: 'italic', textAlign: 'center' },
   dimmed: { opacity: 0.4 },
 });
