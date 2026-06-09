@@ -61,14 +61,16 @@ function parseResults(results: any[], seen: Set<number>): Movie[] {
 
 // Without a genreId: mixes popular + trending for variety.
 // With a genreId: fetches two pages of that genre sorted by popularity.
-export async function fetchPopularMovies(genreId?: number | null): Promise<Movie[]> {
+export async function fetchPopularMovies(genreId?: number | null, maxCert?: string | null): Promise<Movie[]> {
   const seen = new Set<number>();
 
-  if (genreId) {
-    const [r1, r2] = await Promise.all([
-      fetch(`${TMDB_BASE}/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=1`),
-      fetch(`${TMDB_BASE}/discover/movie?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=2`),
-    ]);
+  // Any filter set (genre and/or age) → /discover with those filters combined.
+  if (genreId || maxCert) {
+    const filters = [`api_key=${API_KEY}`, 'language=en-US', 'sort_by=popularity.desc'];
+    if (genreId) filters.push(`with_genres=${genreId}`);
+    if (maxCert) filters.push('certification_country=US', `certification.lte=${encodeURIComponent(maxCert)}`);
+    const base = `${TMDB_BASE}/discover/movie?${filters.join('&')}`;
+    const [r1, r2] = await Promise.all([fetch(`${base}&page=1`), fetch(`${base}&page=2`)]);
     const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
     return [...parseResults(d1.results, seen), ...parseResults(d2.results, seen)];
   }

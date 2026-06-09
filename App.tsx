@@ -8,6 +8,7 @@ import { track } from './services/analytics';
 import { Movie } from './services/movies';
 import { NEW_FLOW_ENABLED } from './lib/flags';
 import CodeScreen from './screens/CodeScreen';
+import AgePickerScreen from './screens/AgePickerScreen';
 import GenreScreen from './screens/GenreScreen';
 import HomeScreen from './screens/HomeScreen';
 import JoinScreen from './screens/JoinScreen';
@@ -16,7 +17,7 @@ import OnboardingScreen from './screens/OnboardingScreen';
 import TiebreakerScreen from './screens/TiebreakerScreen';
 import VotingScreen from './screens/VotingScreen';
 
-type Screen = 'onboarding' | 'home' | 'genre' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match';
+type Screen = 'onboarding' | 'home' | 'genre' | 'agepicker' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match';
 
 const ONBOARDING_KEY = '@together_mode_onboarding_seen';
 
@@ -26,6 +27,7 @@ export default function App() {
   const [sessionCode, setSessionCode] = useState('');
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [genreId, setGenreId] = useState<number | null>(null);
+  const [maxCert, setMaxCert] = useState<string | null>(null);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
   const [matchMoviesSeen, setMatchMoviesSeen] = useState(0);
@@ -67,10 +69,16 @@ export default function App() {
     };
   }, [screen, sessionCode]);
 
-  async function handleGenreSelect(selectedGenreId: number | null) {
-    setLoading(true);
+  function handleGenreSelect(selectedGenreId: number | null) {
     setGenreId(selectedGenreId);
-    const code = await createSession(playerId, selectedGenreId);
+    setScreen('agepicker');
+  }
+
+  // After the age pick: create the session with both filters, then show the code.
+  async function handleAgePick(cert: string | null) {
+    setLoading(true);
+    setMaxCert(cert);
+    const code = await createSession(playerId, genreId, cert);
     setLoading(false);
     if (code) {
       track('session_started', code, playerId);
@@ -102,6 +110,7 @@ export default function App() {
       track('session_joined', code, playerId);
       setSessionCode(code);
       setGenreId(result.genreId);
+      setMaxCert(result.maxCert);
       setIsPlayer1(false);
       setScreen('voting');
     } else {
@@ -143,6 +152,7 @@ export default function App() {
     setScreen('home');
     setSessionCode('');
     setGenreId(null);
+    setMaxCert(null);
     setMatchedMovie('');
     setMatchedMovieImage('');
     setMyYesPicks([]);
@@ -164,6 +174,7 @@ export default function App() {
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
       {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
       {screen === 'genre' && <GenreScreen onSelect={handleGenreSelect} />}
+      {screen === 'agepicker' && <AgePickerScreen onPick={handleAgePick} onCancel={() => setScreen('genre')} />}
       {screen === 'code' && <CodeScreen code={sessionCode} onCancel={handleReset} />}
       {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}
       {screen === 'voting' && (
@@ -172,6 +183,7 @@ export default function App() {
           playerId={playerId}
           isPlayer1={isPlayer1}
           genreId={genreId}
+          maxCert={maxCert}
           onMatch={handleMatch}
           onTiebreaker={handleTiebreaker}
         />

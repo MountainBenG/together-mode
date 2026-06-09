@@ -5,6 +5,8 @@ import WebView from 'react-native-webview';
 import { advanceMovie, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
 import { fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
 import { track } from '../services/analytics';
+import { VOICE_ENABLED } from '../lib/flags';
+import { useVoiceVoting } from '../hooks/useVoiceVoting';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -20,11 +22,12 @@ type Props = {
   playerId: string;
   isPlayer1: boolean;
   genreId?: number | null;
+  maxCert?: string | null;
   onMatch: (title: string, image?: string, moviesSeen?: number, myYesCount?: number) => void;
   onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
 };
 
-export default function VotingScreen({ code, playerId, isPlayer1, genreId, onMatch, onTiebreaker }: Props) {
+export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCert, onMatch, onTiebreaker }: Props) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const moviesRef = useRef<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
@@ -38,7 +41,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, onMat
   const myYesCountRef = useRef(0);
 
   useEffect(() => {
-    fetchPopularMovies(genreId)
+    fetchPopularMovies(genreId, maxCert)
       .then(data => {
         moviesRef.current = data;
         setMovies(data);
@@ -100,6 +103,10 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, onMat
       }
     }
   }
+
+  const voice = useVoiceVoting((vote) => {
+    if (VOICE_ENABLED) handleVote(vote);
+  });
 
   async function handleVote(vote: 'yes' | 'no') {
     if (voted) return;

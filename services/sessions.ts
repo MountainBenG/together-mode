@@ -4,13 +4,14 @@ function generateCode(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-export async function createSession(playerId: string, genreId?: number | null): Promise<string | null> {
+export async function createSession(playerId: string, genreId?: number | null, maxCert?: string | null): Promise<string | null> {
   const code = generateCode();
   const { error } = await supabase.from('sessions').insert({
     code,
     player1_id: playerId,
     status: 'waiting',
     ...(genreId ? { genre_id: genreId } : {}),
+    ...(maxCert ? { max_certification: maxCert } : {}),
   });
   if (error) {
     console.error('createSession error:', error.message);
@@ -20,7 +21,7 @@ export async function createSession(playerId: string, genreId?: number | null): 
 }
 
 export type JoinResult =
-  | { ok: true; genreId: number | null }
+  | { ok: true; genreId: number | null; maxCert: string | null }
   | { ok: false; reason: 'not_found' | 'full' | 'network' };
 
 export async function joinSession(
@@ -29,7 +30,7 @@ export async function joinSession(
 ): Promise<JoinResult> {
   const { data, error } = await supabase
     .from('sessions')
-    .select('id, status, player2_id, genre_id')
+    .select('id, status, player2_id, genre_id, max_certification')
     .eq('code', code.toUpperCase())
     .single();
 
@@ -41,7 +42,7 @@ export async function joinSession(
     .update({ player2_id: playerId, status: 'voting' })
     .eq('code', code.toUpperCase());
 
-  return updateError ? { ok: false, reason: 'network' } : { ok: true, genreId: data.genre_id ?? null };
+  return updateError ? { ok: false, reason: 'network' } : { ok: true, genreId: data.genre_id ?? null, maxCert: data.max_certification ?? null };
 }
 
 export async function submitVote(
