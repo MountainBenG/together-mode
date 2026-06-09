@@ -4,12 +4,20 @@ function generateCode(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-export async function createSession(playerId: string, genreId?: number | null, maxCert?: string | null): Promise<string | null> {
+function generateAlexaPin(): number {
+  return Math.floor(1000 + Math.random() * 9000);
+}
+
+export type CreateSessionResult = { code: string; alexaPin: number };
+
+export async function createSession(playerId: string, genreId?: number | null, maxCert?: string | null): Promise<CreateSessionResult | null> {
   const code = generateCode();
+  const alexaPin = generateAlexaPin();
   const { error } = await supabase.from('sessions').insert({
     code,
     player1_id: playerId,
     status: 'waiting',
+    alexa_pin: alexaPin,
     ...(genreId ? { genre_id: genreId } : {}),
     ...(maxCert ? { max_certification: maxCert } : {}),
   });
@@ -17,7 +25,7 @@ export async function createSession(playerId: string, genreId?: number | null, m
     console.error('createSession error:', error.message);
     return null;
   }
-  return code;
+  return { code, alexaPin };
 }
 
 export type JoinResult =

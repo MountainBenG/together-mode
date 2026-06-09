@@ -1,0 +1,21 @@
+{
+  "name": "together-mode-alexa-skill",
+  "version": "1.0.0",
+  "description": "Alexa skill for Together Mode — voice voting on movies",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "npm run build && cd dist && zip -r ../skill.zip . && cd .. && aws lambda update-function-code --function-name together-mode-alexa --zip-file fileb://skill.zip"
+  },
+  "dependencies": {
+    "ask-sdk-core": "^2.14.0",
+    "ask-sdk-model": "^1.91.0",
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "aws-lambda": "^1.0.7",
+    "@types/aws-lambda": "^8.10.145"
+  }
+}

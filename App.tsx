@@ -25,6 +25,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [playerId, setPlayerId] = useState('');
   const [sessionCode, setSessionCode] = useState('');
+  const [alexaPin, setAlexaPin] = useState<number | null>(null);
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [genreId, setGenreId] = useState<number | null>(null);
   const [maxCert, setMaxCert] = useState<string | null>(null);
@@ -78,11 +79,12 @@ export default function App() {
   async function handleAgePick(cert: string | null) {
     setLoading(true);
     setMaxCert(cert);
-    const code = await createSession(playerId, genreId, cert);
+    const result = await createSession(playerId, genreId, cert);
     setLoading(false);
-    if (code) {
-      track('session_started', code, playerId);
-      setSessionCode(code);
+    if (result) {
+      track('session_started', result.code, playerId);
+      setSessionCode(result.code);
+      setAlexaPin(result.alexaPin);
       setIsPlayer1(true);
       setScreen('code');
     }
@@ -91,11 +93,12 @@ export default function App() {
   // Validated flow (flag off): start a session immediately, no genre/age picker.
   async function handleStartDirect() {
     setLoading(true);
-    const code = await createSession(playerId);
+    const result = await createSession(playerId);
     setLoading(false);
-    if (code) {
-      track('session_started', code, playerId);
-      setSessionCode(code);
+    if (result) {
+      track('session_started', result.code, playerId);
+      setSessionCode(result.code);
+      setAlexaPin(result.alexaPin);
       setIsPlayer1(true);
       setScreen('code');
     }
@@ -175,7 +178,7 @@ export default function App() {
       {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
       {screen === 'genre' && <GenreScreen onSelect={handleGenreSelect} />}
       {screen === 'agepicker' && <AgePickerScreen onPick={handleAgePick} onCancel={() => setScreen('genre')} />}
-      {screen === 'code' && <CodeScreen code={sessionCode} onCancel={handleReset} />}
+      {screen === 'code' && <CodeScreen code={sessionCode} alexaPin={alexaPin} onCancel={handleReset} />}
       {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}
       {screen === 'voting' && (
         <VotingScreen

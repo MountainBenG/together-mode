@@ -1,0 +1,74 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "together mode",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "JoinSessionIntent",
+          "slots": [
+            {
+              "name": "SessionPin",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "join session {SessionPin}",
+            "connect to {SessionPin}",
+            "my pin is {SessionPin}",
+            "use pin {SessionPin}",
+            "connect with {SessionPin}",
+            "join {SessionPin}"
+          ]
+        },
+        {
+          "name": "VoteYesIntent",
+          "slots": [],
+          "samples": [
+            "vote yes",
+            "yes",
+            "yeah",
+            "yep",
+            "I like it",
+            "that one",
+            "looks good",
+            "I'm in",
+            "thumbs up",
+            "sure",
+            "definitely",
+            "let's watch it"
+          ]
+        },
+        {
+          "name": "VoteNoIntent",
+          "slots": [],
+          "samples": [
+            "vote no",
+            "no",
+            "nope",
+            "nah",
+            "pass",
+            "skip",
+            "skip it",
+            "not that one",
+            "thumbs down",
+            "next",
+            "next movie",
+            "I don't want to watch that"
+          ]
+        }
+      ]
+    }
+  }
+}

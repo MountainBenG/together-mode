@@ -11,3 +11,8 @@ export const NEW_FLOW_ENABLED = false;
 // OFF = tap-only (safe for Expo Go). Flip ON only after installing
 // @react-native-voice/voice and building a dev client.
 export const VOICE_ENABLED = false;
+
+// Alexa skill integration — shows the 4-digit PIN on the code screen
+// so users can say "Alexa, ask Together Mode to join {pin}".
+// OFF = PIN hidden (no visual clutter until the skill is deployed).
+export const ALEXA_ENABLED = false;
