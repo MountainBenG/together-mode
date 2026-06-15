@@ -3,7 +3,7 @@ import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacit
 import * as Haptics from 'expo-haptics';
 import WebView from 'react-native-webview';
 import { advanceMovie, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
-import { fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
+import { fetchCertification, fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
 import { track } from '../services/analytics';
 import { VOICE_ENABLED } from '../lib/flags';
 import { useVoiceVoting } from '../hooks/useVoiceVoting';
@@ -36,6 +36,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
   const [trailerFailed, setTrailerFailed] = useState(false);
+  const [cert, setCert] = useState<string | null>(null);
   const subscriptionRef = useRef<any>(null);
   const myYesPicksRef = useRef<Movie[]>([]);
   const myYesCountRef = useRef(0);
@@ -66,6 +67,19 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     setTrailerFailed(false);
     fetchTrailerKey(movies[movieIndex % movies.length].id).then(key => {
       if (!cancelled) setTrailerKey(key);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [movieIndex, movies]);
+
+  // Fetch the current movie's US age rating for the corner badge.
+  useEffect(() => {
+    if (movies.length === 0) return;
+    let cancelled = false;
+    setCert(null);
+    fetchCertification(movies[movieIndex % movies.length].id).then(c => {
+      if (!cancelled) setCert(c);
     });
     return () => {
       cancelled = true;
@@ -180,6 +194,11 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
         <Text style={styles.codePillLabel}>SESSION CODE</Text>
         <Text style={styles.codePillText}>{code}</Text>
       </View>
+      {cert && (
+        <View style={styles.certPill}>
+          <Text style={styles.certText}>{cert}</Text>
+        </View>
+      )}
       <View style={styles.overlay}>
         <View style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
@@ -273,6 +292,24 @@ const styles = StyleSheet.create({
     fontSize: 44,
     fontWeight: '800',
     letterSpacing: 6,
+  },
+  certPill: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    backgroundColor: 'rgba(10,10,28,0.75)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    zIndex: 10,
+  },
+  certText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   backgroundImage: {
     position: 'absolute',

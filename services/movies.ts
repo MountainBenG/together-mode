@@ -43,6 +43,18 @@ export async function fetchTrailerKey(movieId: number): Promise<string | null> {
   return trailer?.key ?? null;
 }
 
+// US age rating (G / PG / PG-13 / R) for a movie, via the release_dates endpoint.
+export async function fetchCertification(movieId: number): Promise<string | null> {
+  const res = await fetch(
+    `${TMDB_BASE}/movie/${movieId}/release_dates?api_key=${API_KEY}`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  const us = (data.results ?? []).find((r: any) => r.iso_3166_1 === 'US');
+  const cert = us?.release_dates?.map((d: any) => d.certification).find((c: string) => c);
+  return cert || null;
+}
+
 function parseResults(results: any[], seen: Set<number>): Movie[] {
   return (results ?? [])
     .filter((m: any) => {
