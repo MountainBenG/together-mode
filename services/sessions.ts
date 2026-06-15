@@ -1,7 +1,11 @@
 import { supabase } from '../lib/supabase';
 
 function generateCode(): string {
-  return Math.random().toString(36).substring(2, 6).toUpperCase();
+  // Unambiguous alphabet (no 0/O/1/I) so codes are easy to read + type. Always 4 chars.
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
 }
 
 function generateAlexaPin(): number {
