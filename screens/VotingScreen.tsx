@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import WebView from 'react-native-webview';
+import * as WebBrowser from 'expo-web-browser';
 import { advanceMovie, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
 import { fetchCertification, fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
 import { track } from '../services/analytics';
@@ -57,10 +58,10 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     };
   }, [code]);
 
-  // Auto-fetch + autoplay the trailer whenever the current movie changes.
-  // Falls back to the poster while loading or if the movie has no trailer.
+  // Fetch the current movie's trailer key for the "Watch trailer" button (opens
+  // it in the in-app browser). Inline embed stays off — YouTube blocks it (152/153).
   useEffect(() => {
-    if (movies.length === 0 || !TRAILERS_ENABLED) return;
+    if (movies.length === 0) return;
     let cancelled = false;
     setTrailerKey(null);
     setMuted(true);
@@ -140,6 +141,15 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     await submitVote(code, playerId, isPlayer1, vote);
   }
 
+  // Open the movie's trailer in the in-app browser (YouTube plays fine here —
+  // the 152/153 wall was only about embedding it inline). Done returns to voting.
+  async function handleWatchTrailer() {
+    if (!trailerKey) return;
+    try {
+      await WebBrowser.openBrowserAsync(`https://www.youtube.com/watch?v=${trailerKey}`);
+    } catch {}
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -166,7 +176,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
 
   return (
     <View style={styles.container}>
-      {trailerKey && !trailerFailed ? (
+      {TRAILERS_ENABLED && trailerKey && !trailerFailed ? (
         <WebView
           source={{ html: trailerHtml, baseUrl: 'https://www.youtube.com' }}
           originWhitelist={['*']}
@@ -205,8 +215,8 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
           <Text style={styles.movieMeta}>{movie.year}</Text>
           <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>
           {trailerKey && (
-            <TouchableOpacity onPress={() => setMuted(m => !m)} style={styles.trailerButton}>
-              <Text style={styles.trailerButtonText}>{muted ? '🔇 Tap for sound' : '🔊 Sound on'}</Text>
+            <TouchableOpacity onPress={handleWatchTrailer} style={styles.trailerButton}>
+              <Text style={styles.trailerButtonText}>▶  Watch trailer</Text>
             </TouchableOpacity>
           )}
           {voted && <Text style={styles.waiting}>Waiting for the other person to vote…</Text>}
@@ -333,8 +343,8 @@ const styles = StyleSheet.create({
   movieMeta: { fontSize: 18, color: '#aaaacc' },
   tagline: { fontSize: 17, color: '#cccccc', lineHeight: 24 },
   waiting: { fontSize: 24, fontWeight: '700', color: '#6c63ff', textAlign: 'center', marginTop: 4 },
-  trailerButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  trailerButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
+  trailerButton: { alignSelf: 'stretch', paddingVertical: 22, paddingHorizontal: 20, borderRadius: 16, backgroundColor: '#6c63ff', alignItems: 'center', marginVertical: 10, borderWidth: 2, borderColor: 'rgba(255,255,255,0.55)' },
+  trailerButtonText: { color: '#ffffff', fontSize: 25, fontWeight: '800', letterSpacing: 0.5 },
   buttons: { flexDirection: 'row', gap: 20, marginTop: 16, alignItems: 'center' },
   noButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(42,26,26,0.85)', borderWidth: 2, borderColor: '#ff4455', alignItems: 'center', justifyContent: 'center' },
   noText: { fontSize: 40, color: '#ff4455' },
