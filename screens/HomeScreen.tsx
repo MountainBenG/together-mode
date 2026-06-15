@@ -20,11 +20,14 @@ export default function HomeScreen({ onStart, onJoin }: Props) {
         </Text>
       </View>
       <View style={styles.actions}>
+        <Text style={styles.howTo}>One of you starts and gets a code — the other joins with it.</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={onStart}>
           <Text style={styles.primaryButtonText}>Start a session</Text>
+          <Text style={styles.primaryButtonHint}>You'll get a code to share</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={onJoin}>
           <Text style={styles.secondaryButtonText}>Join a session</Text>
+          <Text style={styles.secondaryButtonHint}>Enter a code from the other phone</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -91,6 +94,13 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 14,
   },
+  howTo: {
+    fontSize: 14,
+    color: '#8888aa',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
   primaryButton: {
     backgroundColor: '#6c63ff',
     paddingVertical: 18,
@@ -101,6 +111,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  primaryButtonHint: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    marginTop: 3,
   },
   secondaryButton: {
     paddingVertical: 18,
@@ -113,5 +128,10 @@ const styles = StyleSheet.create({
     color: '#8888aa',
     fontSize: 18,
     fontWeight: '500',
+  },
+  secondaryButtonHint: {
+    color: '#6c6c8a',
+    fontSize: 13,
+    marginTop: 3,
   },
 });
