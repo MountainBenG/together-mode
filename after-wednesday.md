@@ -24,3 +24,14 @@ Already built & wired: flag, `max_certification` column, combined genre+age fetc
 
 ## Bigger / optional
 - [ ] Trailers (`TRAILERS_ENABLED`, off): YouTube embed is blocked in the iOS WebView (error 152/153). Revisit with `react-native-youtube-iframe` or a proxy if trailers are worth it.
+
+---
+
+## Progress — 2026-06-15
+**Shipped & live** (`NEW_FLOW_ENABLED` ON, dry-run-tested): onboarding, genre filter, age filter + rating badges. Plus HomeScreen self-serve start fix (proven on a fresh user), bigger/clearer fonts, big "waiting" caption.
+
+**Adaptivity — started, ISOLATED (wire AFTER the next test; it touches the live flow):**
+- `services/preferences.ts` built — per-player genre-preference tracking (AsyncStorage). Nothing imports it yet.
+- Wiring steps: (A) keep `genre_ids` on the `Movie` type (parseResults drops them now); (B) call `recordVote(playerId, movie.genreIds, vote)` in VotingScreen.handleVote; (C) bias `fetchPopularMovies` toward `getFavoriteGenres(playerId)`; (D, later) train an ML model on the collected data if the heuristic isn't enough.
+
+**Still open:** tiebreaker faceoff race; 1-option pick polish; debug logs in lib/supabase.ts; remove redundant fetchMoviesByCertification; add .env.example; trailers (youtube-iframe/proxy).
