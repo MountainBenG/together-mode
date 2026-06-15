@@ -190,7 +190,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
               <Text style={styles.trailerButtonText}>{muted ? '🔇 Tap for sound' : '🔊 Sound on'}</Text>
             </TouchableOpacity>
           )}
-          {voted && <Text style={styles.waiting}>Waiting for the other person…</Text>}
+          {voted && <Text style={styles.waiting}>Waiting for the other person to vote…</Text>}
           {VOICE_ENABLED && voice.transcript !== '' && !voted && (
             <Text style={styles.voiceTranscript}>"{voice.transcript}"</Text>
           )}
@@ -292,17 +292,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     gap: 8,
   },
-  movieTitle: { fontSize: 30, fontWeight: '700', color: '#ffffff', letterSpacing: -0.5 },
-  movieMeta: { fontSize: 15, color: '#aaaacc' },
-  tagline: { fontSize: 14, color: '#cccccc', lineHeight: 20 },
-  waiting: { fontSize: 13, color: '#6c63ff' },
+  movieTitle: { fontSize: 34, fontWeight: '700', color: '#ffffff', letterSpacing: -0.5 },
+  movieMeta: { fontSize: 18, color: '#aaaacc' },
+  tagline: { fontSize: 17, color: '#cccccc', lineHeight: 24 },
+  waiting: { fontSize: 24, fontWeight: '700', color: '#6c63ff', textAlign: 'center', marginTop: 4 },
   trailerButton: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   trailerButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
   buttons: { flexDirection: 'row', gap: 20, marginTop: 16, alignItems: 'center' },
   noButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(42,26,26,0.85)', borderWidth: 2, borderColor: '#ff4455', alignItems: 'center', justifyContent: 'center' },
-  noText: { fontSize: 32, color: '#ff4455' },
+  noText: { fontSize: 40, color: '#ff4455' },
   yesButton: { flex: 1, aspectRatio: 1, borderRadius: 999, backgroundColor: 'rgba(26,42,26,0.85)', borderWidth: 2, borderColor: '#44ff88', alignItems: 'center', justifyContent: 'center' },
-  yesText: { fontSize: 32, color: '#44ff88' },
+  yesText: { fontSize: 40, color: '#44ff88' },
   micButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(108,99,255,0.2)', borderWidth: 2, borderColor: '#6c63ff', alignItems: 'center', justifyContent: 'center' },
   micButtonActive: { backgroundColor: 'rgba(108,99,255,0.5)', borderColor: '#ffffff' },
   micText: { fontSize: 22 },

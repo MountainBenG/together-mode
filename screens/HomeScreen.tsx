@@ -72,22 +72,22 @@ const styles = StyleSheet.create({
     fontSize: 44,
   },
   title: {
-    fontSize: 38,
+    fontSize: 42,
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '600',
     color: '#6c63ff',
     letterSpacing: 0.3,
   },
   description: {
-    fontSize: 15,
+    fontSize: 18,
     color: '#8888aa',
     textAlign: 'center',
-    lineHeight: 23,
+    lineHeight: 27,
     marginTop: 4,
   },
   actions: {
@@ -95,10 +95,10 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   howTo: {
-    fontSize: 14,
+    fontSize: 17,
     color: '#8888aa',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
     marginBottom: 4,
   },
   primaryButton: {
@@ -109,12 +109,12 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: '700',
   },
   primaryButtonHint: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
+    fontSize: 15,
     marginTop: 3,
   },
   secondaryButton: {
@@ -126,12 +126,12 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#8888aa',
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: '500',
   },
   secondaryButtonHint: {
     color: '#6c6c8a',
-    fontSize: 13,
+    fontSize: 15,
     marginTop: 3,
   },
 });
