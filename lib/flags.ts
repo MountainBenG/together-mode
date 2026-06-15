@@ -5,7 +5,7 @@
 
 // The whole in-progress "new experience" — onboarding, genre picker, age filter.
 // OFF = the validated, dry-run-tested flow (Start → code). Flip ON only after a full dry run.
-export const NEW_FLOW_ENABLED = false;
+export const NEW_FLOW_ENABLED = true;
 
 // Voice voting — say "yes" or "no" instead of tapping buttons.
 // OFF = tap-only (safe for Expo Go). Flip ON only after installing
