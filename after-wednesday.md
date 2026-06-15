@@ -35,3 +35,10 @@ Already built & wired: flag, `max_certification` column, combined genre+age fetc
 - Wiring steps: (A) keep `genre_ids` on the `Movie` type (parseResults drops them now); (B) call `recordVote(playerId, movie.genreIds, vote)` in VotingScreen.handleVote; (C) bias `fetchPopularMovies` toward `getFavoriteGenres(playerId)`; (D, later) train an ML model on the collected data if the heuristic isn't enough.
 
 **Still open:** tiebreaker faceoff race; 1-option pick polish; debug logs in lib/supabase.ts; remove redundant fetchMoviesByCertification; add .env.example; trailers (youtube-iframe/proxy).
+
+---
+
+## Async voting (from user test, 2026-06-15) — bigger change
+**Problem:** Voting is lock-step — you have to wait for the other person to vote on each movie before either of you advances ("Waiting for the other person to vote…"). The per-movie waiting is friction (ties to the earlier "waiting felt like lag" feedback).
+**Desired:** Let each person go through all 8 movies at their **own pace** — no waiting per movie. Compute matches from the full set of yes-votes (any movie you *both* said yes to = a match).
+**Note:** Real architecture change — matching model goes from lock-step per-movie → independent voting + compare. Touches the session model (per-movie `*_voted` columns → per-player yes-lists) and the live voting flow. Design deliberately; don't bolt on.
