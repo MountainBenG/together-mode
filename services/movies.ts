@@ -9,6 +9,7 @@ export type Movie = {
   overview: string;
   image: string;
   genreIds: number[];
+  rating: number;
 };
 
 export type Genre = {
@@ -70,6 +71,7 @@ function parseResults(results: any[], seen: Set<number>): Movie[] {
       overview: m.overview,
       image: `${TMDB_IMG}${m.poster_path}`,
       genreIds: m.genre_ids ?? [],
+      rating: m.vote_average ?? 0,
     }));
 }
 

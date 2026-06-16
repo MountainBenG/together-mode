@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import WebView from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
 import { advanceMovie, finishVoting, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
-import { fetchCertification, fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
+import { fetchCertification, fetchPopularMovies, fetchTrailerKey, GENRES, Movie } from '../services/movies';
 import { recordVote } from '../services/preferences';
 import { track } from '../services/analytics';
 import { ASYNC_VOTING_ENABLED, VOICE_ENABLED } from '../lib/flags';
@@ -51,11 +51,13 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   const [muted, setMuted] = useState(true);
   const [trailerFailed, setTrailerFailed] = useState(false);
   const [cert, setCert] = useState<string | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const myYesPicksRef = useRef<Movie[]>([]);
   const myYesCountRef = useRef(0);
   const [iAmDone, setIAmDone] = useState(false); // async voting: I've voted on every movie, waiting for the other player
   const advancingRef = useRef(false); // async voting: guards double-tap during the local advance
+  const infoPulse = useRef(new Animated.Value(1)).current; // gentle "press me" pulse on the info button
 
   useEffect(() => {
     fetchPopularMovies(genreId, maxCert)
@@ -101,6 +103,18 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
       cancelled = true;
     };
   }, [movieIndex, movies]);
+
+  // Gentle continuous pulse so the info button invites a tap (feels alive, not "stuck there").
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(infoPulse, { toValue: 1.05, duration: 750, useNativeDriver: true }),
+        Animated.timing(infoPulse, { toValue: 1.0, duration: 750, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
   function handleSessionUpdate(session: any) {
     if (ASYNC_VOTING_ENABLED) return handleSessionUpdateAsync(session);
@@ -261,6 +275,9 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   }
 
   const movie = movies[movieIndex % movies.length];
+  const genreNames = movie.genreIds
+    .map((id) => GENRES.find((g) => g.id === id)?.name)
+    .filter((n): n is string => !!n);
 
   // Load the trailer through YouTube's IFrame Player API (not a bare embed URL),
   // so we can catch playback failures (onError) and fall back to the poster — and
@@ -307,6 +324,13 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
           <Text style={styles.movieTitle}>{movie.title}</Text>
           <Text style={styles.movieMeta}>{movie.year}</Text>
           <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>
+          <Animated.View style={[styles.infoButtonWrap, { transform: [{ scale: infoPulse }] }]}>
+            <TouchableOpacity onPress={() => setShowInfo(true)} activeOpacity={0.85}>
+              <LinearGradient colors={['#ffd84d', '#ff9b2f']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.infoButton}>
+                <Text style={styles.infoButtonText}>🎬  Information on the movie</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
           {trailerKey && (
             <TouchableOpacity onPress={handleWatchTrailer} style={styles.trailerButton}>
               <Text style={styles.trailerButtonText}>▶  Watch trailer</Text>
@@ -336,6 +360,23 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
           </View>
         </LinearGradient>
       </View>
+      <Modal visible={showInfo} transparent animationType="slide" onRequestClose={() => setShowInfo(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{movie.title}</Text>
+            <Text style={styles.modalMeta}>
+              {movie.year}{cert ? `   ·   ${cert}` : ''}{movie.rating ? `   ·   ⭐ ${movie.rating.toFixed(1)}` : ''}
+            </Text>
+            {genreNames.length > 0 && <Text style={styles.modalGenres}>{genreNames.join('    ·    ')}</Text>}
+            <ScrollView style={styles.modalOverviewScroll} contentContainerStyle={{ paddingBottom: 8 }}>
+              <Text style={styles.modalOverview}>{movie.overview || 'No description available.'}</Text>
+            </ScrollView>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setShowInfo(false)}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -450,4 +491,16 @@ const styles = StyleSheet.create({
   micText: { fontSize: 22 },
   voiceTranscript: { fontSize: 13, color: '#6c63ff', fontStyle: 'italic', textAlign: 'center' },
   dimmed: { opacity: 0.4 },
+  infoButtonWrap: { alignSelf: 'stretch', marginTop: 14, marginBottom: 4, borderRadius: 18, shadowColor: '#ffb020', shadowOpacity: 0.85, shadowRadius: 18, shadowOffset: { width: 0, height: 0 }, elevation: 12 },
+  infoButton: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20, borderRadius: 18 },
+  infoButtonText: { color: '#2a1c00', fontSize: 25, fontWeight: '900', letterSpacing: 0.4 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#171733', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40, maxHeight: '78%', gap: 12, borderTopWidth: 1, borderColor: 'rgba(108,99,255,0.4)' },
+  modalTitle: { fontSize: 30, fontWeight: '800', color: '#ffffff' },
+  modalMeta: { fontSize: 17, color: '#aaaacc', fontWeight: '600' },
+  modalGenres: { fontSize: 16, color: '#6c63ff', fontWeight: '700' },
+  modalOverviewScroll: { maxHeight: 280, marginTop: 4 },
+  modalOverview: { fontSize: 18, color: '#dddde8', lineHeight: 27 },
+  modalClose: { marginTop: 8, backgroundColor: '#6c63ff', paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
+  modalCloseText: { color: '#ffffff', fontSize: 18, fontWeight: '800' },
 });
