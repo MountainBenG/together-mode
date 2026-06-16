@@ -30,6 +30,7 @@ export default function App() {
   const [isPlayer1, setIsPlayer1] = useState(false);
   const [genreId, setGenreId] = useState<number | null>(null);
   const [maxCert, setMaxCert] = useState<string | null>(null);
+  const [recSeedIds, setRecSeedIds] = useState<number[]>([]);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
   const [matchMoviesSeen, setMatchMoviesSeen] = useState(0);
@@ -74,6 +75,14 @@ export default function App() {
 
   function handleGenreSelect(selectedGenreId: number | null) {
     setGenreId(selectedGenreId);
+    setRecSeedIds([]);
+    setScreen('agepicker');
+  }
+
+  // "Recommended for you" (movie-level): the host's taste seed replaces the genre filter.
+  function handleRecommend(seedIds: number[]) {
+    setRecSeedIds(seedIds);
+    setGenreId(null);
     setScreen('agepicker');
   }
 
@@ -81,7 +90,7 @@ export default function App() {
   async function handleAgePick(cert: string | null) {
     setLoading(true);
     setMaxCert(cert);
-    const result = await createSession(playerId, genreId, cert);
+    const result = await createSession(playerId, genreId, cert, recSeedIds);
     setLoading(false);
     if (result) {
       track('session_started', result.code, playerId);
@@ -116,6 +125,7 @@ export default function App() {
       setSessionCode(code);
       setGenreId(result.genreId);
       setMaxCert(result.maxCert);
+      setRecSeedIds(result.recSeedIds);
       setIsPlayer1(false);
       setScreen('voting');
     } else {
@@ -160,6 +170,7 @@ export default function App() {
     setSessionCode('');
     setGenreId(null);
     setMaxCert(null);
+    setRecSeedIds([]);
     setMatchedMovie('');
     setMatchedMovieImage('');
     setMatchByChance(false);
@@ -181,7 +192,7 @@ export default function App() {
       <StatusBar style="light" />
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
       {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
-      {screen === 'genre' && <GenreScreen playerId={playerId} onSelect={handleGenreSelect} />}
+      {screen === 'genre' && <GenreScreen playerId={playerId} onSelect={handleGenreSelect} onRecommend={handleRecommend} />}
       {screen === 'agepicker' && <AgePickerScreen onPick={handleAgePick} onCancel={() => setScreen('genre')} />}
       {screen === 'code' && <CodeScreen code={sessionCode} alexaPin={alexaPin} onCancel={handleReset} />}
       {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}
@@ -192,6 +203,7 @@ export default function App() {
           isPlayer1={isPlayer1}
           genreId={genreId}
           maxCert={maxCert}
+          recSeedIds={recSeedIds}
           onMatch={handleMatch}
           onTiebreaker={handleTiebreaker}
           onNoMatch={() => setScreen('nomatch')}

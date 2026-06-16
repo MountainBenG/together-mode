@@ -99,3 +99,29 @@ export async function fetchPopularMovies(genreId?: number | null, maxCert?: stri
   const [popular, trending] = await Promise.all([popularRes.json(), trendingRes.json()]);
   return [...parseResults(popular.results, seen), ...parseResults(trending.results, seen)];
 }
+
+// Movie-level recommendations: TMDB "people who liked these also liked…" for the seed
+// movies (a player's recent yes-votes), interleaved + deduped. Both phones pass the SAME
+// seeds (shared via the session) so they build the same catalog and matching still works.
+// NOTE (v1 gap): not yet filtered by age certification — the seeds are the player's own
+// liked movies, so recs track that taste, but a proper maxCert filter is a follow-up.
+export async function fetchRecommendedMovies(seedIds: number[], _maxCert?: string | null): Promise<Movie[]> {
+  const seeds = seedIds.slice(0, 4);
+  if (seeds.length === 0) return [];
+  const seen = new Set<number>(seeds); // never recommend a movie they already liked
+  const responses = await Promise.all(
+    seeds.map((id) =>
+      fetch(`${TMDB_BASE}/movie/${id}/recommendations?api_key=${API_KEY}&language=en-US&page=1`)
+        .then((r) => (r.ok ? r.json() : { results: [] }))
+        .catch(() => ({ results: [] }))
+    )
+  );
+  const lists = responses.map((d) => parseResults(d.results, seen));
+  // Interleave so the catalog isn't dominated by a single seed's recommendations.
+  const merged: Movie[] = [];
+  const maxLen = Math.max(0, ...lists.map((l) => l.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const l of lists) if (l[i]) merged.push(l[i]);
+  }
+  return merged;
+}

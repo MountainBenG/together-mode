@@ -75,3 +75,9 @@ Resolves the old tiebreaker "Bugs to fix": the "1 option vs 2" faceoff race did 
 ## Recommendations engine v1 — SHIPPED 2026-06-16 (`RECOMMENDATIONS_ENABLED` ON)
 First layer of the recs engine: the genre screen surfaces a "✨ Recommended for you" card = the genre this player has said yes to most (`getFavoriteGenres` over the `recordVote` taste data). Picking it flows through the normal genre select, so the session + two-player matching are unchanged. Shows only once there's vote history. Verified solo on device.
 **Next layers:** (1) movie-level "because you liked X" via TMDB `/movie/{id}/recommendations` — needs liked-movie-IDs tracked + a shared rec-seed on the session so BOTH phones fetch the same catalog (otherwise matching breaks); (2) profiles / "who's watching" so taste is tracked per-person, not per-device.
+
+---
+
+## Movie-level recommendations — SHIPPED 2026-06-16 (`MOVIE_RECS_ENABLED` ON)
+"Because you liked X": the genre screen's recommended card becomes "🎬 Movies you'll probably love" when the host has liked-movie history. Seeds TMDB `/movie/{id}/recommendations` from the host's recent yes-votes (`recordLikedMovie`), and the seed travels through the session (new `rec_seed_ids` jsonb column) so BOTH phones build the same catalog → matching still works. Verified on two devices (same movies both sides).
+**Known gap (must-fix before publishing to kids):** recs are NOT age-filtered yet — `fetchRecommendedMovies` ignores `maxCert`. Seeds are the user's own age-appropriate likes so recs track that, but a real cert filter on the rec path is still needed.

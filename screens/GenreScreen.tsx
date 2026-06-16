@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GENRES, Genre } from '../services/movies';
-import { RECOMMENDATIONS_ENABLED } from '../lib/flags';
-import { getFavoriteGenres } from '../services/preferences';
+import { MOVIE_RECS_ENABLED, RECOMMENDATIONS_ENABLED } from '../lib/flags';
+import { getFavoriteGenres, getRecentLikedMovies } from '../services/preferences';
 
 type Props = {
   playerId: string;
   onSelect: (genreId: number | null) => void;
+  onRecommend: (seedIds: number[]) => void;
 };
 
-export default function GenreScreen({ playerId, onSelect }: Props) {
+export default function GenreScreen({ playerId, onSelect, onRecommend }: Props) {
   // Recommendations v1: the genre this player has said yes to most, surfaced as a
   // shortcut. Picking it just selects that genre, so the session/matching is unchanged.
   const [recommended, setRecommended] = useState<Genre | null>(null);
+  const [seeds, setSeeds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!RECOMMENDATIONS_ENABLED || !playerId) return;
@@ -22,6 +24,11 @@ export default function GenreScreen({ playerId, onSelect }: Props) {
       const g = GENRES.find((x) => x.id === favs[0]);
       if (g) setRecommended(g);
     });
+    if (MOVIE_RECS_ENABLED) {
+      getRecentLikedMovies(playerId, 5).then((ids) => {
+        if (!cancelled) setSeeds(ids);
+      });
+    }
     return () => { cancelled = true; };
   }, [playerId]);
 
@@ -32,13 +39,19 @@ export default function GenreScreen({ playerId, onSelect }: Props) {
         <Text style={styles.subtitle}>You pick the vibe — your friend gets the same filter.</Text>
       </View>
 
-      {recommended && (
+      {MOVIE_RECS_ENABLED && seeds.length > 0 ? (
+        <TouchableOpacity style={styles.recCard} onPress={() => onRecommend(seeds)} activeOpacity={0.85}>
+          <Text style={styles.recLabel}>✨  RECOMMENDED FOR YOU</Text>
+          <Text style={styles.recName}>🎬  Movies you'll probably love</Text>
+          <Text style={styles.recWhy}>Picked from the movies you've said yes to.</Text>
+        </TouchableOpacity>
+      ) : recommended ? (
         <TouchableOpacity style={styles.recCard} onPress={() => onSelect(recommended.id)} activeOpacity={0.85}>
           <Text style={styles.recLabel}>✨  RECOMMENDED FOR YOU</Text>
           <Text style={styles.recName}>{recommended.emoji}  {recommended.name}</Text>
           <Text style={styles.recWhy}>You've said yes to {recommended.name} movies the most.</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
 
       <FlatList
         data={GENRES}

@@ -14,7 +14,7 @@ function generateAlexaPin(): number {
 
 export type CreateSessionResult = { code: string; alexaPin: number };
 
-export async function createSession(playerId: string, genreId?: number | null, maxCert?: string | null): Promise<CreateSessionResult | null> {
+export async function createSession(playerId: string, genreId?: number | null, maxCert?: string | null, recSeedIds?: number[]): Promise<CreateSessionResult | null> {
   const code = generateCode();
   const alexaPin = generateAlexaPin();
   const { error } = await supabase.from('sessions').insert({
@@ -24,6 +24,7 @@ export async function createSession(playerId: string, genreId?: number | null, m
     alexa_pin: alexaPin,
     ...(genreId ? { genre_id: genreId } : {}),
     ...(maxCert ? { max_certification: maxCert } : {}),
+    ...(recSeedIds && recSeedIds.length ? { rec_seed_ids: recSeedIds } : {}),
   });
   if (error) {
     console.error('createSession error:', error.message);
@@ -33,7 +34,7 @@ export async function createSession(playerId: string, genreId?: number | null, m
 }
 
 export type JoinResult =
-  | { ok: true; genreId: number | null; maxCert: string | null }
+  | { ok: true; genreId: number | null; maxCert: string | null; recSeedIds: number[] }
   | { ok: false; reason: 'not_found' | 'full' | 'network' };
 
 export async function joinSession(
@@ -42,7 +43,7 @@ export async function joinSession(
 ): Promise<JoinResult> {
   const { data, error } = await supabase
     .from('sessions')
-    .select('id, status, player2_id, genre_id, max_certification')
+    .select('id, status, player2_id, genre_id, max_certification, rec_seed_ids')
     .eq('code', code.toUpperCase())
     .single();
 
@@ -54,7 +55,7 @@ export async function joinSession(
     .update({ player2_id: playerId, status: 'voting' })
     .eq('code', code.toUpperCase());
 
-  return updateError ? { ok: false, reason: 'network' } : { ok: true, genreId: data.genre_id ?? null, maxCert: data.max_certification ?? null };
+  return updateError ? { ok: false, reason: 'network' } : { ok: true, genreId: data.genre_id ?? null, maxCert: data.max_certification ?? null, recSeedIds: data.rec_seed_ids ?? [] };
 }
 
 export async function submitVote(

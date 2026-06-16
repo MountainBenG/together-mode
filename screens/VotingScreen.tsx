@@ -5,10 +5,10 @@ import * as Haptics from 'expo-haptics';
 import WebView from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
 import { advanceMovie, finishVoting, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
-import { fetchCertification, fetchPopularMovies, fetchTrailerKey, GENRES, Movie } from '../services/movies';
-import { recordVote } from '../services/preferences';
+import { fetchCertification, fetchPopularMovies, fetchRecommendedMovies, fetchTrailerKey, GENRES, Movie } from '../services/movies';
+import { recordLikedMovie, recordVote } from '../services/preferences';
 import { track } from '../services/analytics';
-import { ASYNC_VOTING_ENABLED, VOICE_ENABLED } from '../lib/flags';
+import { ASYNC_VOTING_ENABLED, MOVIE_RECS_ENABLED, VOICE_ENABLED } from '../lib/flags';
 import { useVoiceVoting } from '../hooks/useVoiceVoting';
 
 const TIEBREAKER_AFTER = 8;
@@ -36,12 +36,13 @@ type Props = {
   isPlayer1: boolean;
   genreId?: number | null;
   maxCert?: string | null;
+  recSeedIds?: number[];
   onMatch: (title: string, image?: string, moviesSeen?: number, myYesCount?: number) => void;
   onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
   onNoMatch: () => void;
 };
 
-export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCert, onMatch, onTiebreaker, onNoMatch }: Props) {
+export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCert, recSeedIds, onMatch, onTiebreaker, onNoMatch }: Props) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const moviesRef = useRef<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
@@ -60,10 +61,13 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   const infoPulse = useRef(new Animated.Value(1)).current; // gentle "press me" pulse on the info button
 
   useEffect(() => {
-    fetchPopularMovies(genreId, maxCert)
-      .then(data => {
-        moviesRef.current = data;
-        setMovies(data);
+    const useRecs = MOVIE_RECS_ENABLED && !!recSeedIds && recSeedIds.length > 0;
+    (useRecs ? fetchRecommendedMovies(recSeedIds!, maxCert) : fetchPopularMovies(genreId, maxCert))
+      .then(async (data) => {
+        let list = data;
+        if (useRecs && list.length === 0) list = await fetchPopularMovies(genreId, maxCert); // fallback if recs come back empty
+        moviesRef.current = list;
+        setMovies(list);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -206,6 +210,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     if (vote === 'yes' && movie) {
       myYesPicksRef.current = [...myYesPicksRef.current, movie];
       myYesCountRef.current += 1;
+      recordLikedMovie(playerId, movie.id); // movie-level taste, for "because you liked X" recs
     }
     await submitVote(code, playerId, isPlayer1, vote);
   }
@@ -225,6 +230,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     if (vote === 'yes' && movie) {
       myYesPicksRef.current = [...myYesPicksRef.current, movie];
       myYesCountRef.current += 1;
+      recordLikedMovie(playerId, movie.id); // movie-level taste, for "because you liked X" recs
     }
     const nextIndex = movieIndex + 1;
     if (nextIndex >= TIEBREAKER_AFTER) {

@@ -43,3 +43,28 @@ export async function getFavoriteGenres(playerId: string, limit = 3): Promise<nu
     .slice(0, limit)
     .map(([genreId]) => Number(genreId));
 }
+
+// Movie-level taste: the actual movie IDs this player has said yes to, most recent
+// first, deduped and capped. These seed "because you liked X" recommendations.
+const LIKED_PREFIX = '@together_mode_liked_';
+const MAX_LIKED = 30;
+
+export async function recordLikedMovie(playerId: string, movieId: number): Promise<void> {
+  if (!playerId || !movieId) return;
+  try {
+    const raw = await AsyncStorage.getItem(LIKED_PREFIX + playerId);
+    const list: number[] = raw ? JSON.parse(raw) : [];
+    const next = [movieId, ...list.filter((id) => id !== movieId)].slice(0, MAX_LIKED);
+    await AsyncStorage.setItem(LIKED_PREFIX + playerId, JSON.stringify(next));
+  } catch {}
+}
+
+export async function getRecentLikedMovies(playerId: string, limit = 5): Promise<number[]> {
+  try {
+    const raw = await AsyncStorage.getItem(LIKED_PREFIX + playerId);
+    const list: number[] = raw ? JSON.parse(raw) : [];
+    return list.slice(0, limit);
+  } catch {
+    return [];
+  }
+}

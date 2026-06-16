@@ -29,3 +29,9 @@ export const ASYNC_VOTING_ENABLED = true;
 // player says yes to most). Flows through the normal genre pick, so two-player
 // matching is unaffected. OFF until its own dry run.
 export const RECOMMENDATIONS_ENABLED = true;
+
+// Movie-level recommendations — "because you liked X" via TMDB /movie/{id}/recommendations,
+// seeded by the host's recent liked movies and shared through the session so BOTH phones
+// build the same catalog (otherwise two-player matching breaks). Builds on the recs above.
+// OFF until its own dry run.
+export const MOVIE_RECS_ENABLED = true;
