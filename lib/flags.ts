@@ -16,3 +16,10 @@ export const VOICE_ENABLED = false;
 // so users can say "Alexa, ask Together Mode to join {pin}".
 // OFF = PIN hidden (no visual clutter until the skill is deployed).
 export const ALEXA_ENABLED = false;
+
+// Async voting — each person votes through all the movies at their own pace
+// (no per-movie waiting); when BOTH finish, matches = movies both said yes to
+// (0 = No Match, 1 = match, 2+ = tiebreaker over the mutual set).
+// OFF = the validated lock-step flow. Requires the player*_yes / player*_done
+// columns (see the migration). Flip ON only after its own two-device dry run.
+export const ASYNC_VOTING_ENABLED = false;

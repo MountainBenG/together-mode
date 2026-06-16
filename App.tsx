@@ -13,11 +13,12 @@ import GenreScreen from './screens/GenreScreen';
 import HomeScreen from './screens/HomeScreen';
 import JoinScreen from './screens/JoinScreen';
 import MatchScreen from './screens/MatchScreen';
+import NoMatchScreen from './screens/NoMatchScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import TiebreakerScreen from './screens/TiebreakerScreen';
 import VotingScreen from './screens/VotingScreen';
 
-type Screen = 'onboarding' | 'home' | 'genre' | 'agepicker' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match';
+type Screen = 'onboarding' | 'home' | 'genre' | 'agepicker' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match' | 'nomatch';
 
 const ONBOARDING_KEY = '@together_mode_onboarding_seen';
 
@@ -189,6 +190,7 @@ export default function App() {
           maxCert={maxCert}
           onMatch={handleMatch}
           onTiebreaker={handleTiebreaker}
+          onNoMatch={() => setScreen('nomatch')}
         />
       )}
       {screen === 'tiebreaker' && (
@@ -213,6 +215,7 @@ export default function App() {
           onReset={handleReset}
         />
       )}
+      {screen === 'nomatch' && <NoMatchScreen onReset={handleReset} />}
     </>
   );
 }

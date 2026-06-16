@@ -5,6 +5,7 @@ type EventName =
   | 'session_joined'
   | 'vote_cast'
   | 'match_found'
+  | 'no_match'
   | 'tiebreaker_started'
   | 'tiebreaker_pick_submitted';
 

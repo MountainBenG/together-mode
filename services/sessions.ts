@@ -70,6 +70,22 @@ export async function submitVote(
     .eq('code', code.toUpperCase());
 }
 
+// Async voting: a player records their whole yes-list at once when they finish
+// voting on every movie, and flips their "done" flag. Only this player writes
+// their own columns, so there's no cross-player race on a single write.
+export async function finishVoting(
+  code: string,
+  isPlayer1: boolean,
+  yesMovieIds: number[]
+): Promise<void> {
+  const yesField = isPlayer1 ? 'player1_yes' : 'player2_yes';
+  const doneField = isPlayer1 ? 'player1_done' : 'player2_done';
+  await supabase
+    .from('sessions')
+    .update({ [yesField]: yesMovieIds, [doneField]: true })
+    .eq('code', code.toUpperCase());
+}
+
 export async function advanceMovie(code: string, nextIndex: number): Promise<void> {
   await supabase
     .from('sessions')
@@ -104,6 +120,11 @@ export async function restartSession(code: string): Promise<void> {
       player1_voted: null,
       player2_voted: null,
       matched_movie_title: null,
+      // Clear the async-voting state too, so "pick something else" replays cleanly.
+      player1_yes: [],
+      player2_yes: [],
+      player1_done: false,
+      player2_done: false,
     })
     .eq('code', code.toUpperCase());
 }

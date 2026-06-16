@@ -4,11 +4,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import WebView from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
-import { advanceMovie, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
+import { advanceMovie, finishVoting, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
 import { fetchCertification, fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
 import { recordVote } from '../services/preferences';
 import { track } from '../services/analytics';
-import { VOICE_ENABLED } from '../lib/flags';
+import { ASYNC_VOTING_ENABLED, VOICE_ENABLED } from '../lib/flags';
 import { useVoiceVoting } from '../hooks/useVoiceVoting';
 
 const TIEBREAKER_AFTER = 8;
@@ -26,9 +26,10 @@ type Props = {
   maxCert?: string | null;
   onMatch: (title: string, image?: string, moviesSeen?: number, myYesCount?: number) => void;
   onTiebreaker: (myYesPicks: Movie[], allMovies: Movie[]) => void;
+  onNoMatch: () => void;
 };
 
-export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCert, onMatch, onTiebreaker }: Props) {
+export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCert, onMatch, onTiebreaker, onNoMatch }: Props) {
   const [movies, setMovies] = useState<Movie[]>([]);
   const moviesRef = useRef<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
@@ -41,6 +42,8 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   const subscriptionRef = useRef<any>(null);
   const myYesPicksRef = useRef<Movie[]>([]);
   const myYesCountRef = useRef(0);
+  const [iAmDone, setIAmDone] = useState(false); // async voting: I've voted on every movie, waiting for the other player
+  const advancingRef = useRef(false); // async voting: guards double-tap during the local advance
 
   useEffect(() => {
     fetchPopularMovies(genreId, maxCert)
@@ -88,6 +91,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   }, [movieIndex, movies]);
 
   function handleSessionUpdate(session: any) {
+    if (ASYNC_VOTING_ENABLED) return handleSessionUpdateAsync(session);
     if (session.status === 'matched') {
       const matchedMovie = moviesRef.current.find(m => m.title === session.matched_movie_title);
       onMatch(session.matched_movie_title, matchedMovie?.image, session.current_movie_index + 1, myYesCountRef.current);
@@ -119,11 +123,49 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     }
   }
 
+  // Async voting: the mutual-yes set = movies BOTH players said yes to. Computed
+  // off the row payload (player1_yes ∩ player2_yes) so both phones agree on it.
+  function computeMutualMovies(session: any): Movie[] {
+    const p1: number[] = session.player1_yes ?? [];
+    const p2: number[] = session.player2_yes ?? [];
+    const p2set = new Set(p2);
+    const mutualIds = p1.filter((id) => p2set.has(id));
+    return mutualIds
+      .map((id) => moviesRef.current.find((m) => m.id === id))
+      .filter((m): m is Movie => !!m);
+  }
+
+  function handleSessionUpdateAsync(session: any) {
+    if (session.status === 'matched') {
+      const matchedMovie = moviesRef.current.find((m) => m.title === session.matched_movie_title);
+      onMatch(session.matched_movie_title, matchedMovie?.image, TIEBREAKER_AFTER, myYesCountRef.current);
+      return;
+    }
+    if (session.status === 'tiebreaker') {
+      onTiebreaker(computeMutualMovies(session), moviesRef.current);
+      return;
+    }
+    // Resolve only once BOTH players have finished voting on every movie.
+    if (!session.player1_done || !session.player2_done) return;
+    const mutual = computeMutualMovies(session);
+    if (mutual.length === 1) {
+      track('match_found', code, playerId, { movie: mutual[0].title });
+      setMatched(code, mutual[0].title);
+    } else if (mutual.length >= 2) {
+      track('tiebreaker_started', code, playerId);
+      setTiebreaker(code);
+    } else {
+      track('no_match', code, playerId);
+      onNoMatch();
+    }
+  }
+
   const voice = useVoiceVoting((vote) => {
     if (VOICE_ENABLED) handleVote(vote);
   });
 
   async function handleVote(vote: 'yes' | 'no') {
+    if (ASYNC_VOTING_ENABLED) return handleVoteAsync(vote);
     if (voted) return;
     setVoted(true);
     if (vote === 'yes') {
@@ -140,6 +182,32 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
       myYesCountRef.current += 1;
     }
     await submitVote(code, playerId, isPlayer1, vote);
+  }
+
+  // Async voting: record the vote locally and immediately advance to the next
+  // movie at this phone's own pace — no waiting on the other player. Once this
+  // phone has voted on every movie, write its whole yes-list + done flag; the
+  // resolution runs once BOTH phones are done (handleSessionUpdateAsync).
+  async function handleVoteAsync(vote: 'yes' | 'no') {
+    if (iAmDone || advancingRef.current) return;
+    advancingRef.current = true;
+    Haptics.impactAsync(vote === 'yes' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium);
+    const currentMovies = moviesRef.current;
+    const movie = currentMovies[movieIndex];
+    track('vote_cast', code, playerId, { vote, movie: movie?.title });
+    if (movie) recordVote(playerId, movie.genreIds, vote); // fire-and-forget: builds the prefs profile
+    if (vote === 'yes' && movie) {
+      myYesPicksRef.current = [...myYesPicksRef.current, movie];
+      myYesCountRef.current += 1;
+    }
+    const nextIndex = movieIndex + 1;
+    if (nextIndex >= TIEBREAKER_AFTER) {
+      await finishVoting(code, isPlayer1, myYesPicksRef.current.map((m) => m.id));
+      setIAmDone(true);
+    } else {
+      setMovieIndex(nextIndex);
+    }
+    advancingRef.current = false;
   }
 
   // Open the movie's trailer in the in-app browser (YouTube plays fine here —
@@ -164,6 +232,18 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Couldn't load movies. Check your connection.</Text>
+      </View>
+    );
+  }
+
+  // Async voting: I've voted on every movie — wait (once) for the other player to finish.
+  if (ASYNC_VOTING_ENABLED && iAmDone) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.doneEmoji}>✅</Text>
+        <Text style={styles.doneTitle}>You're done!</Text>
+        <Text style={styles.doneSubtitle}>Waiting for the other person to finish voting…</Text>
+        <ActivityIndicator size="large" color="#6c63ff" style={{ marginTop: 12 }} />
       </View>
     );
   }
@@ -260,6 +340,9 @@ const styles = StyleSheet.create({
     color: '#8888aa',
     fontSize: 16,
   },
+  doneEmoji: { fontSize: 64 },
+  doneTitle: { fontSize: 30, fontWeight: '800', color: '#ffffff' },
+  doneSubtitle: { fontSize: 18, color: '#8888aa', textAlign: 'center', paddingHorizontal: 40, lineHeight: 26 },
   container: {
     flex: 1,
   },
