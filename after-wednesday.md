@@ -42,3 +42,16 @@ Already built & wired: flag, `max_certification` column, combined genre+age fetc
 **Problem:** Voting is lock-step — you have to wait for the other person to vote on each movie before either of you advances ("Waiting for the other person to vote…"). The per-movie waiting is friction (ties to the earlier "waiting felt like lag" feedback).
 **Desired:** Let each person go through all 8 movies at their **own pace** — no waiting per movie. Compute matches from the full set of yes-votes (any movie you *both* said yes to = a match).
 **Note:** Real architecture change — matching model goes from lock-step per-movie → independent voting + compare. Touches the session model (per-movie `*_voted` columns → per-player yes-lists) and the live voting flow. Design deliberately; don't bolt on.
+
+---
+
+## Async voting — DESIGN LOCKED (2026-06-16). Build behind a new `ASYNC_VOTING_ENABLED` flag.
+Ben's design = Model B + tiebreaker reuse:
+- **Voting:** each player swipes all 8 movies at their own pace — NO per-movie waiting.
+- **When BOTH finish, compare the two yes-lists:**
+  - 0 movies both liked → No Match.
+  - exactly 1 → that's the match.
+  - 2+ → run the existing tiebreaker over the **mutual-yes set** (Ben's reuse idea).
+- **One end-wait:** if you finish first, a single "waiting for them to finish" (not per-movie).
+- **Data-model change (the meaty part):** the session must store each player's FULL yes/no per movie + a per-player "done" flag — not just the current-movie vote. (e.g. `player1_votes`/`player2_votes` JSONB + `player1_done`/`player2_done`, or a votes table.)
+- **Build order:** flag off → add DB storage (Ben runs SQL) → rewrite VotingScreen vote/advance + the match computation → feed the mutual set into TiebreakerScreen → dry run on 2 devices → flip flag. Multi-step; build with fresh focus.
