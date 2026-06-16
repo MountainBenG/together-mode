@@ -97,13 +97,3 @@ export async function fetchPopularMovies(genreId?: number | null, maxCert?: stri
   const [popular, trending] = await Promise.all([popularRes.json(), trendingRes.json()]);
   return [...parseResults(popular.results, seen), ...parseResults(trending.results, seen)];
 }
-
-export async function fetchMoviesByCertification(maxCert: string): Promise<Movie[]> {
-  const res = await fetch(
-    `${TMDB_BASE}/discover/movie?api_key=${API_KEY}&language=en-US&page=1&sort_by=popularity.desc&certification_country=US&certification.lte=${encodeURIComponent(maxCert)}`
-  );
-  if (!res.ok) throw new Error(`TMDB error: ${res.status}`);
-  const data = await res.json();
-  const seen = new Set<number>();
-  return parseResults(data.results, seen);
-}
