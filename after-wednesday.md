@@ -81,3 +81,16 @@ First layer of the recs engine: the genre screen surfaces a "✨ Recommended for
 ## Movie-level recommendations — SHIPPED 2026-06-16 (`MOVIE_RECS_ENABLED` ON)
 "Because you liked X": the genre screen's recommended card becomes "🎬 Movies you'll probably love" when the host has liked-movie history. Seeds TMDB `/movie/{id}/recommendations` from the host's recent yes-votes (`recordLikedMovie`), and the seed travels through the session (new `rec_seed_ids` jsonb column) so BOTH phones build the same catalog → matching still works. Verified on two devices (same movies both sides).
 **Known gap (must-fix before publishing to kids):** recs are NOT age-filtered yet — `fetchRecommendedMovies` ignores `maxCert`. Seeds are the user's own age-appropriate likes so recs track that, but a real cert filter on the rec path is still needed.
+
+---
+
+## Accounts + Profiles (Netflix-style) — DESIGN LOCKED 2026-06-16. Build behind `ACCOUNTS_ENABLED`.
+Ben's vision: a **family account** you log into once (credentials saved → auto-login), with multiple **"who's watching" profiles** inside it, each tracking its own taste.
+
+- **Family account:** Supabase Auth (email + password). Configure `lib/supabase.ts` client with AsyncStorage storage + `persistSession: true` → stays logged in across launches (no re-typing).
+- **Profiles:** `profiles` table (`id uuid`, `account_id = auth.uid()`, `name`, `color/emoji`). RLS so a user only sees/edits their own. Many per account.
+- **Who's watching:** on launch → logged in? → fetch the account's profiles → "Who's watching?" picker → pick = active profile. No profiles yet → "Add profile." Not logged in → login/signup screen.
+- **Identity integration (the key wiring):** the active profile's id becomes the `playerId` used for sessions (`player1_id`/`player2_id`) AND for taste (`preferences` keyed by profile id). Flag ON = use profile id; OFF = today's anonymous device playerId.
+- **Taste per profile:** key preferences by profile id. v1 local (AsyncStorage per profile); later a server-side `profile_preferences` table so taste follows the account across devices.
+- **Build phases:** (1) Supabase Auth client config + login/signup screen + flag; (2) profiles table + RLS + "Who's watching" picker + add-profile; (3) wire active profile id as the identity through sessions + preferences; (4, later) server-side taste so it follows the account.
+- **Why build it carefully/fresh:** this is auth — real credentials + RLS + session persistence. Subtle to get right; worth a clear head, not a marathon-tail rush.
