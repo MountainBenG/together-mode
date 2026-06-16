@@ -75,6 +75,26 @@ function parseResults(results: any[], seen: Set<number>): Movie[] {
     }));
 }
 
+// US movie ratings from least to most restrictive, for the age-cap comparison.
+const CERT_ORDER = ['G', 'PG', 'PG-13', 'R', 'NC-17'];
+
+// Kids-safe age filter. TMDB's own certification.lte filter is unreliable (it lets
+// higher-rated movies slip through), so we verify each movie's US rating ourselves and
+// keep ONLY those we can confirm are at/under the cap. Unrated or above-cap → dropped.
+async function filterByCert(movies: Movie[], maxCert?: string | null): Promise<Movie[]> {
+  const maxIdx = maxCert ? CERT_ORDER.indexOf(maxCert) : -1;
+  if (maxIdx === -1) return movies; // no cap (or unrecognized) → no filtering
+  const checked = await Promise.all(
+    movies.map(async (m) => ({ m, cert: await fetchCertification(m.id) }))
+  );
+  return checked
+    .filter(({ cert }) => {
+      const idx = cert ? CERT_ORDER.indexOf(cert) : -1;
+      return idx !== -1 && idx <= maxIdx;
+    })
+    .map(({ m }) => m);
+}
+
 // Without a genreId: mixes popular + trending for variety.
 // With a genreId: fetches two pages of that genre sorted by popularity.
 export async function fetchPopularMovies(genreId?: number | null, maxCert?: string | null): Promise<Movie[]> {
@@ -88,7 +108,7 @@ export async function fetchPopularMovies(genreId?: number | null, maxCert?: stri
     const base = `${TMDB_BASE}/discover/movie?${filters.join('&')}`;
     const [r1, r2] = await Promise.all([fetch(`${base}&page=1`), fetch(`${base}&page=2`)]);
     const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
-    return [...parseResults(d1.results, seen), ...parseResults(d2.results, seen)];
+    return filterByCert([...parseResults(d1.results, seen), ...parseResults(d2.results, seen)], maxCert);
   }
 
   const [popularRes, trendingRes] = await Promise.all([
@@ -97,15 +117,15 @@ export async function fetchPopularMovies(genreId?: number | null, maxCert?: stri
   ]);
   if (!popularRes.ok) throw new Error(`TMDB error: ${popularRes.status}`);
   const [popular, trending] = await Promise.all([popularRes.json(), trendingRes.json()]);
-  return [...parseResults(popular.results, seen), ...parseResults(trending.results, seen)];
+  return filterByCert([...parseResults(popular.results, seen), ...parseResults(trending.results, seen)], maxCert);
 }
 
 // Movie-level recommendations: TMDB "people who liked these also liked…" for the seed
 // movies (a player's recent yes-votes), interleaved + deduped. Both phones pass the SAME
 // seeds (shared via the session) so they build the same catalog and matching still works.
-// NOTE (v1 gap): not yet filtered by age certification — the seeds are the player's own
-// liked movies, so recs track that taste, but a proper maxCert filter is a follow-up.
-export async function fetchRecommendedMovies(seedIds: number[], _maxCert?: string | null): Promise<Movie[]> {
+// Age-capped (kids-safe): only candidates whose US rating is CONFIRMED at/under maxCert
+// are kept — above-cap AND unrated movies are dropped (an unrated movie could be anything).
+export async function fetchRecommendedMovies(seedIds: number[], maxCert?: string | null): Promise<Movie[]> {
   const seeds = seedIds.slice(0, 4);
   if (seeds.length === 0) return [];
   const seen = new Set<number>(seeds); // never recommend a movie they already liked
@@ -123,5 +143,6 @@ export async function fetchRecommendedMovies(seedIds: number[], _maxCert?: strin
   for (let i = 0; i < maxLen; i++) {
     for (const l of lists) if (l[i]) merged.push(l[i]);
   }
-  return merged;
+
+  return filterByCert(merged, maxCert);
 }
