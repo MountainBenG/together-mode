@@ -3,11 +3,18 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 type Props = {
   onStart: () => void;
   onJoin: () => void;
+  profileName?: string | null;
+  onSwitchProfile?: () => void;
 };
 
-export default function HomeScreen({ onStart, onJoin }: Props) {
+export default function HomeScreen({ onStart, onJoin, profileName, onSwitchProfile }: Props) {
   return (
     <View style={styles.container}>
+      {profileName && onSwitchProfile && (
+        <TouchableOpacity style={styles.profilePill} onPress={onSwitchProfile} activeOpacity={0.7}>
+          <Text style={styles.profilePillText}>👤  {profileName}   ·   Switch</Text>
+        </TouchableOpacity>
+      )}
       <View style={styles.hero}>
         <View style={styles.iconGlow} />
         <View style={styles.iconCircle}>
@@ -133,5 +140,22 @@ const styles = StyleSheet.create({
     color: '#6c6c8a',
     fontSize: 15,
     marginTop: 3,
+  },
+  profilePill: {
+    position: 'absolute',
+    top: 56,
+    alignSelf: 'center',
+    backgroundColor: '#1a1a3a',
+    borderWidth: 1,
+    borderColor: '#2a2a4a',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    zIndex: 10,
+  },
+  profilePillText: {
+    color: '#cfcaff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

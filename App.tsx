@@ -35,6 +35,7 @@ export default function App() {
   const [genreId, setGenreId] = useState<number | null>(null);
   const [maxCert, setMaxCert] = useState<string | null>(null);
   const [recSeedIds, setRecSeedIds] = useState<number[]>([]);
+  const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
   const [matchedMovie, setMatchedMovie] = useState('');
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
   const [matchMoviesSeen, setMatchMoviesSeen] = useState(0);
@@ -79,9 +80,15 @@ export default function App() {
   // are tracked per person, not per device.
   function handlePickProfile(profile: Profile) {
     setPlayerId(profile.id);
+    setActiveProfileName(profile.name);
     AsyncStorage.getItem(ONBOARDING_KEY).then((seen) => {
       setScreen(NEW_FLOW_ENABLED && !seen ? 'onboarding' : 'home');
     });
+  }
+
+  // Back to "Who's watching?" to change the active profile.
+  function handleSwitchProfile() {
+    setScreen('whoswatching');
   }
 
   // Player 1: wait for player 2 to join
@@ -218,7 +225,7 @@ export default function App() {
       {screen === 'login' && <LoginScreen onAuthed={handleAuthed} />}
       {screen === 'whoswatching' && <WhoIsWatchingScreen onPick={handlePickProfile} />}
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
-      {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
+      {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} profileName={ACCOUNTS_ENABLED ? activeProfileName : null} onSwitchProfile={ACCOUNTS_ENABLED ? handleSwitchProfile : undefined} />}
       {screen === 'genre' && <GenreScreen playerId={playerId} onSelect={handleGenreSelect} onRecommend={handleRecommend} />}
       {screen === 'agepicker' && <AgePickerScreen onPick={handleAgePick} onCancel={() => setScreen('genre')} />}
       {screen === 'code' && <CodeScreen code={sessionCode} alexaPin={alexaPin} onCancel={handleReset} />}
