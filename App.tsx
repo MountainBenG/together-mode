@@ -5,20 +5,22 @@ import { ActivityIndicator, View } from 'react-native';
 import { getPlayerId } from './lib/playerId';
 import { createSession, joinSession, subscribeToSession } from './services/sessions';
 import { track } from './services/analytics';
+import { getCurrentUserId } from './services/auth';
 import { Movie } from './services/movies';
-import { NEW_FLOW_ENABLED } from './lib/flags';
+import { ACCOUNTS_ENABLED, NEW_FLOW_ENABLED } from './lib/flags';
 import CodeScreen from './screens/CodeScreen';
 import AgePickerScreen from './screens/AgePickerScreen';
 import GenreScreen from './screens/GenreScreen';
 import HomeScreen from './screens/HomeScreen';
 import JoinScreen from './screens/JoinScreen';
+import LoginScreen from './screens/LoginScreen';
 import MatchScreen from './screens/MatchScreen';
 import NoMatchScreen from './screens/NoMatchScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import TiebreakerScreen from './screens/TiebreakerScreen';
 import VotingScreen from './screens/VotingScreen';
 
-type Screen = 'onboarding' | 'home' | 'genre' | 'agepicker' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match' | 'nomatch';
+type Screen = 'login' | 'onboarding' | 'home' | 'genre' | 'agepicker' | 'code' | 'join' | 'voting' | 'tiebreaker' | 'match' | 'nomatch';
 
 const ONBOARDING_KEY = '@together_mode_onboarding_seen';
 
@@ -46,8 +48,14 @@ export default function App() {
     Promise.all([
       getPlayerId(),
       AsyncStorage.getItem(ONBOARDING_KEY),
-    ]).then(([id, seen]) => {
+    ]).then(async ([id, seen]) => {
       setPlayerId(id);
+      // Accounts on + not logged in → start at the login screen.
+      if (ACCOUNTS_ENABLED && !(await getCurrentUserId())) {
+        setScreen('login');
+        setLoading(false);
+        return;
+      }
       // Flag off = validated flow: skip onboarding, go straight home.
       setScreen(NEW_FLOW_ENABLED && !seen ? 'onboarding' : 'home');
       setLoading(false);
@@ -57,6 +65,13 @@ export default function App() {
   async function handleOnboardingDone() {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
     setScreen('home');
+  }
+
+  // After a successful login/signup, continue into the normal flow.
+  function handleAuthed() {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((seen) => {
+      setScreen(NEW_FLOW_ENABLED && !seen ? 'onboarding' : 'home');
+    });
   }
 
   // Player 1: wait for player 2 to join
@@ -190,6 +205,7 @@ export default function App() {
   return (
     <>
       <StatusBar style="light" />
+      {screen === 'login' && <LoginScreen onAuthed={handleAuthed} />}
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
       {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
       {screen === 'genre' && <GenreScreen playerId={playerId} onSelect={handleGenreSelect} onRecommend={handleRecommend} />}

@@ -35,3 +35,8 @@ export const RECOMMENDATIONS_ENABLED = true;
 // build the same catalog (otherwise two-player matching breaks). Builds on the recs above.
 // OFF until its own dry run.
 export const MOVIE_RECS_ENABLED = true;
+
+// Accounts + profiles (Netflix-style) — a family account logs in once (stays logged
+// in) and picks a "who's watching" profile. Phase 1 = login/signup. OFF = today's
+// anonymous, no-login flow. Flip ON only after its own dry run.
+export const ACCOUNTS_ENABLED = false;
