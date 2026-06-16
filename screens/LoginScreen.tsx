@@ -11,6 +11,7 @@ export default function LoginScreen({ onAuthed }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
   const isSignup = mode === 'signup';
@@ -22,10 +23,20 @@ export default function LoginScreen({ onAuthed }: Props) {
     }
     setLoading(true);
     setError('');
+    setInfo('');
     const result = isSignup ? await signUp(email, password) : await signIn(email, password);
     setLoading(false);
-    if (result.ok) onAuthed();
-    else setError(result.error);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    if (isSignup && result.needsConfirmation) {
+      // Email confirmation is on: the account exists but must be confirmed before login.
+      setMode('login');
+      setInfo('Account created! Check your email for a confirmation link, then log in.');
+      return;
+    }
+    onAuthed();
   }
 
   return (
@@ -56,12 +67,13 @@ export default function LoginScreen({ onAuthed }: Props) {
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {info ? <Text style={styles.info}>{info}</Text> : null}
 
         <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
           {loading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.buttonText}>{isSignup ? 'Create account' : 'Log in'}</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => { setMode(isSignup ? 'login' : 'signup'); setError(''); }} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => { setMode(isSignup ? 'login' : 'signup'); setError(''); setInfo(''); }} activeOpacity={0.7}>
           <Text style={styles.toggle}>
             {isSignup ? 'Already have an account?  Log in' : 'New here?  Create a family account'}
           </Text>
@@ -88,6 +100,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   error: { color: '#ff6b6b', fontSize: 14, textAlign: 'center' },
+  info: { color: '#44ff88', fontSize: 14, textAlign: 'center', lineHeight: 20 },
   button: { backgroundColor: '#6c63ff', borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginTop: 6 },
   buttonText: { color: '#ffffff', fontSize: 18, fontWeight: '800' },
   toggle: { color: '#6c63ff', fontSize: 15, textAlign: 'center', marginTop: 14, fontWeight: '600' },

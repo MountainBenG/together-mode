@@ -6,9 +6,10 @@ const COLORS = ['#6c63ff', '#ff6b6b', '#44ff88', '#ffc24b', '#4db5ff', '#ff7bd5'
 
 type Props = {
   onPick: (profile: Profile) => void;
+  onLogout: () => void;
 };
 
-export default function WhoIsWatchingScreen({ onPick }: Props) {
+export default function WhoIsWatchingScreen({ onPick, onLogout }: Props) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -103,6 +104,12 @@ export default function WhoIsWatchingScreen({ onPick }: Props) {
           )}
         </View>
       )}
+
+      {!adding && (
+        <TouchableOpacity style={styles.logout} onPress={onLogout} activeOpacity={0.7}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -127,4 +134,6 @@ const styles = StyleSheet.create({
   addButton: { backgroundColor: '#6c63ff', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   addButtonText: { color: '#ffffff', fontSize: 18, fontWeight: '800' },
   cancel: { color: '#8888aa', fontSize: 15, textAlign: 'center', paddingVertical: 8 },
+  logout: { position: 'absolute', bottom: 50, alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 20 },
+  logoutText: { color: '#6c6c8a', fontSize: 15, fontWeight: '600' },
 });

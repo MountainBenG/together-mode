@@ -5,7 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { getPlayerId } from './lib/playerId';
 import { createSession, joinSession, subscribeToSession } from './services/sessions';
 import { track } from './services/analytics';
-import { getCurrentUserId } from './services/auth';
+import { getCurrentUserId, signOut } from './services/auth';
 import { Profile } from './services/profiles';
 import { Movie } from './services/movies';
 import { ACCOUNTS_ENABLED, NEW_FLOW_ENABLED } from './lib/flags';
@@ -89,6 +89,12 @@ export default function App() {
   // Back to "Who's watching?" to change the active profile.
   function handleSwitchProfile() {
     setScreen('whoswatching');
+  }
+
+  async function handleLogout() {
+    await signOut();
+    setActiveProfileName(null);
+    setScreen('login');
   }
 
   // Player 1: wait for player 2 to join
@@ -223,7 +229,7 @@ export default function App() {
     <>
       <StatusBar style="light" />
       {screen === 'login' && <LoginScreen onAuthed={handleAuthed} />}
-      {screen === 'whoswatching' && <WhoIsWatchingScreen onPick={handlePickProfile} />}
+      {screen === 'whoswatching' && <WhoIsWatchingScreen onPick={handlePickProfile} onLogout={handleLogout} />}
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
       {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} profileName={ACCOUNTS_ENABLED ? activeProfileName : null} onSwitchProfile={ACCOUNTS_ENABLED ? handleSwitchProfile : undefined} />}
       {screen === 'genre' && <GenreScreen playerId={playerId} onSelect={handleGenreSelect} onRecommend={handleRecommend} />}
