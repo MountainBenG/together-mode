@@ -181,7 +181,7 @@ export default function App() {
       <StatusBar style="light" />
       {screen === 'onboarding' && <OnboardingScreen onDone={handleOnboardingDone} />}
       {screen === 'home' && <HomeScreen onStart={NEW_FLOW_ENABLED ? () => setScreen('genre') : handleStartDirect} onJoin={() => setScreen('join')} />}
-      {screen === 'genre' && <GenreScreen onSelect={handleGenreSelect} />}
+      {screen === 'genre' && <GenreScreen playerId={playerId} onSelect={handleGenreSelect} />}
       {screen === 'agepicker' && <AgePickerScreen onPick={handleAgePick} onCancel={() => setScreen('genre')} />}
       {screen === 'code' && <CodeScreen code={sessionCode} alexaPin={alexaPin} onCancel={handleReset} />}
       {screen === 'join' && <JoinScreen onJoin={handleJoin} onCancel={() => { setJoinError(''); setScreen('home'); }} externalError={joinError} />}

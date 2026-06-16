@@ -23,3 +23,9 @@ export const ALEXA_ENABLED = false;
 // OFF = the validated lock-step flow. Requires the player*_yes / player*_done
 // columns (see the migration). Flip ON only after its own two-device dry run.
 export const ASYNC_VOTING_ENABLED = true;
+
+// Recommendations (v1) — surfaces a "Recommended for you" genre on the genre screen,
+// auto-chosen from the taste data recordVote() has been collecting (the genre this
+// player says yes to most). Flows through the normal genre pick, so two-player
+// matching is unaffected. OFF until its own dry run.
+export const RECOMMENDATIONS_ENABLED = true;
