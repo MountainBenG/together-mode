@@ -22,4 +22,4 @@ export const ALEXA_ENABLED = false;
 // (0 = No Match, 1 = match, 2+ = tiebreaker over the mutual set).
 // OFF = the validated lock-step flow. Requires the player*_yes / player*_done
 // columns (see the migration). Flip ON only after its own two-device dry run.
-export const ASYNC_VOTING_ENABLED = false;
+export const ASYNC_VOTING_ENABLED = true;

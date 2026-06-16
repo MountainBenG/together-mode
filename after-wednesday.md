@@ -55,3 +55,6 @@ Ben's design = Model B + tiebreaker reuse:
 - **One end-wait:** if you finish first, a single "waiting for them to finish" (not per-movie).
 - **Data-model change (the meaty part):** the session must store each player's FULL yes/no per movie + a per-player "done" flag — not just the current-movie vote. (e.g. `player1_votes`/`player2_votes` JSONB + `player1_done`/`player2_done`, or a votes table.)
 - **Build order:** flag off → add DB storage (Ben runs SQL) → rewrite VotingScreen vote/advance + the match computation → feed the mutual set into TiebreakerScreen → dry run on 2 devices → flip flag. Multi-step; build with fresh focus.
+
+**✅ SHIPPED 2026-06-16** — `ASYNC_VOTING_ENABLED` ON after a two-device dry run. Migration added `player1_yes`/`player2_yes` (jsonb) + `player1_done`/`player2_done` (bool).
+- **Gotcha to remember:** Supabase realtime handed the jsonb yes-arrays back in a shape the strict `===` intersection missed (string / number-type drift), so it always computed 0 mutual → always "No Match." Fixed with `asIdArray()` coercion in VotingScreen before intersecting. **Lesson: never trust the runtime type of a jsonb column from a realtime payload — coerce it.**

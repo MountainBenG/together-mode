@@ -18,6 +18,18 @@ const TIEBREAKER_AFTER = 8;
 // Flip to true once a working embed (react-native-youtube-iframe / a proxy) is in.
 const TRAILERS_ENABLED = false;
 
+// Realtime can deliver a jsonb column as either a parsed array or a JSON string,
+// and the ids inside can be numbers or numeric strings. Coerce to a clean
+// number[] so the mutual-yes intersection is reliable across both phones.
+function asIdArray(value: any): number[] {
+  const arr = typeof value === 'string' ? safeParseArray(value) : value;
+  return Array.isArray(arr) ? arr.map((x: any) => Number(x)).filter((n) => !Number.isNaN(n)) : [];
+}
+
+function safeParseArray(s: string): any {
+  try { return JSON.parse(s); } catch { return []; }
+}
+
 type Props = {
   code: string;
   playerId: string;
@@ -126,8 +138,8 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
   // Async voting: the mutual-yes set = movies BOTH players said yes to. Computed
   // off the row payload (player1_yes ∩ player2_yes) so both phones agree on it.
   function computeMutualMovies(session: any): Movie[] {
-    const p1: number[] = session.player1_yes ?? [];
-    const p2: number[] = session.player2_yes ?? [];
+    const p1 = asIdArray(session.player1_yes);
+    const p2 = asIdArray(session.player2_yes);
     const p2set = new Set(p2);
     const mutualIds = p1.filter((id) => p2set.has(id));
     return mutualIds
