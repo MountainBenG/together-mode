@@ -8,6 +8,7 @@ export type Movie = {
   year: string;
   overview: string;
   image: string;
+  genreIds: number[];
 };
 
 export type Genre = {
@@ -68,6 +69,7 @@ function parseResults(results: any[], seen: Set<number>): Movie[] {
       year: m.release_date?.substring(0, 4) ?? '',
       overview: m.overview,
       image: `${TMDB_IMG}${m.poster_path}`,
+      genreIds: m.genre_ids ?? [],
     }));
 }
 

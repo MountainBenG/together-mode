@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import WebView from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
 import { advanceMovie, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
 import { fetchCertification, fetchPopularMovies, fetchTrailerKey, Movie } from '../services/movies';
+import { recordVote } from '../services/preferences';
 import { track } from '../services/analytics';
 import { VOICE_ENABLED } from '../lib/flags';
 import { useVoiceVoting } from '../hooks/useVoiceVoting';
@@ -134,6 +136,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     const currentMovies = moviesRef.current;
     const movie = currentMovies[movieIndex % currentMovies.length];
     track('vote_cast', code, playerId, { vote, movie: movie?.title });
+    if (movie) recordVote(playerId, movie.genreIds, vote); // fire-and-forget: builds the prefs profile
     if (vote === 'yes' && movie) {
       myYesPicksRef.current = [...myYesPicksRef.current, movie];
       myYesCountRef.current += 1;
@@ -210,7 +213,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
         </View>
       )}
       <View style={styles.overlay}>
-        <View style={styles.bottomContent}>
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.92)']} locations={[0, 0.35, 1]} style={styles.bottomContent}>
           <Text style={styles.movieTitle}>{movie.title}</Text>
           <Text style={styles.movieMeta}>{movie.year}</Text>
           <Text style={styles.tagline} numberOfLines={2}>{movie.overview}</Text>
@@ -241,7 +244,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
               <Text style={styles.yesText}>✓</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
       </View>
     </View>
   );
@@ -325,8 +328,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    right: 0,
+    bottom: 0,
   },
   overlay: {
     flex: 1,
@@ -336,7 +339,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingBottom: 60,
     paddingTop: 80,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     gap: 8,
   },
   movieTitle: { fontSize: 34, fontWeight: '700', color: '#ffffff', letterSpacing: -0.5 },
