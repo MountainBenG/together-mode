@@ -58,3 +58,14 @@ Ben's design = Model B + tiebreaker reuse:
 
 **✅ SHIPPED 2026-06-16** — `ASYNC_VOTING_ENABLED` ON after a two-device dry run. Migration added `player1_yes`/`player2_yes` (jsonb) + `player1_done`/`player2_done` (bool).
 - **Gotcha to remember:** Supabase realtime handed the jsonb yes-arrays back in a shape the strict `===` intersection missed (string / number-type drift), so it always computed 0 mutual → always "No Match." Fixed with `asIdArray()` coercion in VotingScreen before intersecting. **Lesson: never trust the runtime type of a jsonb column from a realtime payload — coerce it.**
+
+---
+
+## Tiebreaker → coin-flip Final Round — SHIPPED 2026-06-16
+The tiebreaker now ALWAYS resolves (no more dead-end No Match from it):
+- Pick favorite → if you disagree → **manual Final Round** (one more real vote) → if you STILL disagree → **coin flip**.
+- Coin flip is **deterministic**: both phones derive the same winner from `code + the two titles` (no random mismatch, no extra round-trip).
+- Honest labeling: the coin outcome says **"The coin chose!"** (not "It's a match!"), via a `byChance` flag threaded App → MatchScreen.
+- Animated minted-coin toss (gravity arc + 8 flips + metallic sheen) in TiebreakerScreen. Lottie is the route if we ever want photoreal.
+
+Resolves the old tiebreaker "Bugs to fix": the "1 option vs 2" faceoff race did NOT reproduce on a two-device test (both rendered 2); the "1-option pick" is moot since the pick list is the mutual-yes set (always 2+).

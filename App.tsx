@@ -34,6 +34,7 @@ export default function App() {
   const [matchedMovieImage, setMatchedMovieImage] = useState('');
   const [matchMoviesSeen, setMatchMoviesSeen] = useState(0);
   const [matchMyYesCount, setMatchMyYesCount] = useState(0);
+  const [matchByChance, setMatchByChance] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [myYesPicks, setMyYesPicks] = useState<Movie[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
@@ -128,11 +129,12 @@ export default function App() {
     }
   }
 
-  function handleMatch(title: string, image?: string, moviesSeen?: number, myYesCount?: number) {
+  function handleMatch(title: string, image?: string, moviesSeen?: number, myYesCount?: number, byChance?: boolean) {
     setMatchedMovie(title);
     setMatchedMovieImage(image ?? '');
     setMatchMoviesSeen(moviesSeen ?? 0);
     setMatchMyYesCount(myYesCount ?? 0);
+    setMatchByChance(byChance ?? false);
     setScreen('match');
   }
 
@@ -141,6 +143,7 @@ export default function App() {
     setMatchedMovieImage('');
     setMatchMoviesSeen(0);
     setMatchMyYesCount(0);
+    setMatchByChance(false);
     setMyYesPicks([]);
     setAllMovies([]);
     setScreen('voting');
@@ -159,6 +162,7 @@ export default function App() {
     setMaxCert(null);
     setMatchedMovie('');
     setMatchedMovieImage('');
+    setMatchByChance(false);
     setMyYesPicks([]);
     setAllMovies([]);
   }
@@ -211,6 +215,7 @@ export default function App() {
           movieImage={matchedMovieImage}
           moviesSeen={matchMoviesSeen}
           myYesCount={matchMyYesCount}
+          byChance={matchByChance}
           onRestart={handleRestart}
           onReset={handleReset}
         />

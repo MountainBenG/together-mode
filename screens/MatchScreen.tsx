@@ -11,11 +11,12 @@ type Props = {
   movieImage?: string;
   moviesSeen?: number;
   myYesCount?: number;
+  byChance?: boolean;
   onRestart: () => void;
   onReset: () => void;
 };
 
-export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, myYesCount, onRestart, onReset }: Props) {
+export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, myYesCount, byChance, onRestart, onReset }: Props) {
   const emojiScale = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentY = useRef(new Animated.Value(28)).current;
@@ -57,7 +58,9 @@ export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, 
     try { await WebBrowser.openBrowserAsync(url); } catch {}
   }
 
-  const statLine = moviesSeen
+  const statLine = byChance
+    ? "You couldn't agree — so a coin flip picked one. Fair's fair!"
+    : moviesSeen
     ? `Found on movie ${moviesSeen} — you said yes to ${myYesCount ?? 0}`
     : 'You both said yes.';
 
@@ -72,10 +75,10 @@ export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, 
 
       <View style={styles.centerContent}>
         <Animated.Text style={[styles.emoji, { transform: [{ scale: emojiScale }] }]}>
-          🎬
+          {byChance ? '🪙' : '🎬'}
         </Animated.Text>
         <Animated.View style={[styles.textGroup, { opacity: contentOpacity, transform: [{ translateY: contentY }] }]}>
-          <Text style={styles.heading}>It's a match!</Text>
+          <Text style={styles.heading}>{byChance ? 'The coin chose!' : "It's a match!"}</Text>
           <Text style={styles.movieTitle}>{movieTitle}</Text>
           <Text style={styles.sub}>{statLine}</Text>
         </Animated.View>
