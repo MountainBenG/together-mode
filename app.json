@@ -13,13 +13,15 @@
       "backgroundColor": "#0f0f23"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mountainbeng.togethermode"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f0f23"
       },
+      "package": "com.mountainbeng.togethermode",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -28,6 +30,12 @@
     },
     "plugins": [
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b36fc219-fe29-4a66-8f1a-5aa3d1cccc02"
+      }
+    },
+    "owner": "mountainbeng"
   }
 }
