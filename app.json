@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.asterkind.togethermode"
+      "bundleIdentifier": "space.astrokind.togethermode"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f0f23"
       },
-      "package": "com.asterkind.togethermode",
+      "package": "space.astrokind.togethermode",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
