@@ -68,3 +68,27 @@ export async function getRecentLikedMovies(playerId: string, limit = 5): Promise
     return [];
   }
 }
+
+// Movies a player has marked "already seen" — hidden from their future decks, so
+// matches land on films neither person has seen. Local per player; capped.
+const SEEN_PREFIX = '@together_mode_seen_';
+const MAX_SEEN = 300;
+
+export async function recordSeenMovie(playerId: string, movieId: number): Promise<void> {
+  if (!playerId || !movieId) return;
+  try {
+    const raw = await AsyncStorage.getItem(SEEN_PREFIX + playerId);
+    const list: number[] = raw ? JSON.parse(raw) : [];
+    if (list.includes(movieId)) return;
+    await AsyncStorage.setItem(SEEN_PREFIX + playerId, JSON.stringify([movieId, ...list].slice(0, MAX_SEEN)));
+  } catch {}
+}
+
+export async function getSeenMovies(playerId: string): Promise<number[]> {
+  try {
+    const raw = await AsyncStorage.getItem(SEEN_PREFIX + playerId);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}

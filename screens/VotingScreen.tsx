@@ -6,7 +6,7 @@ import WebView from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
 import { advanceMovie, finishVoting, setMatched, setTiebreaker, submitVote, subscribeToSession } from '../services/sessions';
 import { fetchCertification, fetchPopularMovies, fetchRecommendedMovies, fetchTrailerKey, GENRES, Movie } from '../services/movies';
-import { recordLikedMovie, recordVote } from '../services/preferences';
+import { getSeenMovies, recordLikedMovie, recordSeenMovie, recordVote } from '../services/preferences';
 import { track } from '../services/analytics';
 import { ASYNC_VOTING_ENABLED, MOVIE_RECS_ENABLED, VOICE_ENABLED } from '../lib/flags';
 import { useVoiceVoting } from '../hooks/useVoiceVoting';
@@ -65,12 +65,14 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     (useRecs ? fetchRecommendedMovies(recSeedIds!, maxCert) : fetchPopularMovies(genreId, maxCert))
       .then(async (data) => {
         let list = data;
-        // If recs come back thin (after the age filter, etc.), top up with popular so the
-        // deck is never too short to vote through.
-        if (useRecs && list.length < TIEBREAKER_AFTER) {
+        // Hide movies this player has already marked "seen" — matches land on unseen films.
+        const seenSet = new Set(await getSeenMovies(playerId));
+        if (seenSet.size > 0) list = list.filter((m) => !seenSet.has(m.id));
+        // If the deck is now thin (recs trimmed tight, or lots seen), top up with popular.
+        if (list.length < TIEBREAKER_AFTER) {
           const filler = await fetchPopularMovies(genreId, maxCert);
-          const seen = new Set(list.map((m) => m.id));
-          list = [...list, ...filler.filter((m) => !seen.has(m.id))];
+          const have = new Set<number>([...list.map((m) => m.id), ...seenSet]);
+          list = [...list, ...filler.filter((m) => !have.has(m.id))];
         }
         moviesRef.current = list;
         setMovies(list);
@@ -248,6 +250,24 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     advancingRef.current = false;
   }
 
+  // "Seen it": skip this movie without a vote, and remember it so it's hidden from
+  // this player's future decks — matches then land on films neither person has seen.
+  async function handleSeenIt() {
+    const movie = moviesRef.current[movieIndex];
+    if (movie) recordSeenMovie(playerId, movie.id);
+    if (!ASYNC_VOTING_ENABLED) { handleVote('no'); return; }
+    if (iAmDone || advancingRef.current) return;
+    advancingRef.current = true;
+    const nextIndex = movieIndex + 1;
+    if (nextIndex >= TIEBREAKER_AFTER) {
+      await finishVoting(code, isPlayer1, myYesPicksRef.current.map((m) => m.id));
+      setIAmDone(true);
+    } else {
+      setMovieIndex(nextIndex);
+    }
+    advancingRef.current = false;
+  }
+
   // Open the movie's trailer in the in-app browser (YouTube plays fine here —
   // the 152/153 wall was only about embedding it inline). Done returns to voting.
   async function handleWatchTrailer() {
@@ -370,6 +390,9 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
               <Text style={styles.yesText}>✓</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity onPress={handleSeenIt} style={styles.seenButton} activeOpacity={0.7}>
+            <Text style={styles.seenButtonText}>👁  Already seen it</Text>
+          </TouchableOpacity>
         </LinearGradient>
       </View>
       <Modal visible={showInfo} transparent animationType="slide" onRequestClose={() => setShowInfo(false)}>
@@ -503,6 +526,8 @@ const styles = StyleSheet.create({
   micText: { fontSize: 22 },
   voiceTranscript: { fontSize: 13, color: '#6c63ff', fontStyle: 'italic', textAlign: 'center' },
   dimmed: { opacity: 0.4 },
+  seenButton: { alignSelf: 'center', paddingVertical: 10, marginTop: 10 },
+  seenButtonText: { color: 'rgba(255,255,255,0.55)', fontSize: 15, fontWeight: '600' },
   infoButtonWrap: { alignSelf: 'stretch', marginTop: 14, marginBottom: 4, borderRadius: 18, shadowColor: '#ffb020', shadowOpacity: 0.85, shadowRadius: 18, shadowOffset: { width: 0, height: 0 }, elevation: 12 },
   infoButton: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20, borderRadius: 18 },
   infoButtonText: { color: '#2a1c00', fontSize: 25, fontWeight: '900', letterSpacing: 0.4 },
