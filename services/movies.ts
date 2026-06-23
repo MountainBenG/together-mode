@@ -10,6 +10,7 @@ export type Movie = {
   image: string;
   genreIds: number[];
   rating: number;
+  voteCount: number;
 };
 
 export type Genre = {
@@ -72,6 +73,7 @@ function parseResults(results: any[], seen: Set<number>): Movie[] {
       image: `${TMDB_IMG}${m.poster_path}`,
       genreIds: m.genre_ids ?? [],
       rating: m.vote_average ?? 0,
+      voteCount: m.vote_count ?? 0,
     }));
 }
 
@@ -145,4 +147,30 @@ export async function fetchRecommendedMovies(seedIds: number[], maxCert?: string
   }
 
   return filterByCert(merged, maxCert);
+}
+
+// Where the matched movie can be watched (US), via TMDB's watch-providers endpoint
+// (data is provided by JustWatch — attribution required when shown). Returns streaming
+// + rent/buy provider names and a link to the full list. Seed of the referral model.
+export async function fetchWatchProviders(
+  title: string
+): Promise<{ link: string; stream: string[]; rentBuy: string[] } | null> {
+  try {
+    const sRes = await fetch(`${TMDB_BASE}/search/movie?api_key=${API_KEY}&language=en-US&page=1&query=${encodeURIComponent(title)}`);
+    if (!sRes.ok) return null;
+    const id = (await sRes.json()).results?.[0]?.id;
+    if (!id) return null;
+    const pRes = await fetch(`${TMDB_BASE}/movie/${id}/watch/providers?api_key=${API_KEY}`);
+    if (!pRes.ok) return null;
+    const us = (await pRes.json()).results?.US;
+    if (!us) return null;
+    const names = (arr: any[]): string[] => Array.from(new Set((arr ?? []).map((p: any) => p.provider_name)));
+    return {
+      link: us.link ?? '',
+      stream: names(us.flatrate),
+      rentBuy: names([...(us.rent ?? []), ...(us.buy ?? [])]),
+    };
+  } catch {
+    return null;
+  }
 }

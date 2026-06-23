@@ -371,7 +371,7 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{movie.title}</Text>
             <Text style={styles.modalMeta}>
-              {movie.year}{cert ? `   ·   ${cert}` : ''}{movie.rating ? `   ·   ⭐ ${movie.rating.toFixed(1)}` : ''}
+              {movie.year}{cert ? `   ·   ${cert}` : ''}{movie.rating && movie.voteCount >= 50 ? `   ·   ⭐ ${movie.rating.toFixed(1)}` : ''}
             </Text>
             {genreNames.length > 0 && <Text style={styles.modalGenres}>{genreNames.join('    ·    ')}</Text>}
             <ScrollView style={styles.modalOverviewScroll} contentContainerStyle={{ paddingBottom: 8 }}>

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { restartSession, subscribeToSession } from '../services/sessions';
+import { fetchWatchProviders } from '../services/movies';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -22,6 +23,11 @@ export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, 
   const contentY = useRef(new Animated.Value(28)).current;
   const glowScale = useRef(new Animated.Value(0.5)).current;
   const restarting = useRef(false);
+  const [providers, setProviders] = useState<{ link: string; stream: string[]; rentBuy: string[] } | null>(null);
+
+  useEffect(() => {
+    fetchWatchProviders(movieTitle).then(setProviders);
+  }, [movieTitle]);
 
   useEffect(() => {
     Animated.sequence([
@@ -54,15 +60,13 @@ export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, 
   }
 
   async function handleWhereToWatch() {
-    const url = `https://www.justwatch.com/us/search?q=${encodeURIComponent(movieTitle)}`;
+    const url = providers?.link || `https://www.justwatch.com/us/search?q=${encodeURIComponent(movieTitle)}`;
     try { await WebBrowser.openBrowserAsync(url); } catch {}
   }
 
   const statLine = byChance
     ? "You couldn't agree — so a coin flip picked one. Fair's fair!"
-    : moviesSeen
-    ? `Found on movie ${moviesSeen} — you said yes to ${myYesCount ?? 0}`
-    : 'You both said yes.';
+    : 'You both said yes! 🍿';
 
   return (
     <View style={styles.container}>
@@ -81,6 +85,13 @@ export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, 
           <Text style={styles.heading}>{byChance ? 'The coin chose!' : "It's a match!"}</Text>
           <Text style={styles.movieTitle}>{movieTitle}</Text>
           <Text style={styles.sub}>{statLine}</Text>
+          {providers && (providers.stream.length > 0 || providers.rentBuy.length > 0) && (
+            <Text style={styles.providers}>
+              {providers.stream.length > 0
+                ? `▶  On ${providers.stream.slice(0, 3).join('  ·  ')}`
+                : `Rent/buy on ${providers.rentBuy.slice(0, 3).join('  ·  ')}`}
+            </Text>
+          )}
         </Animated.View>
       </View>
 
@@ -94,6 +105,9 @@ export default function MatchScreen({ code, movieTitle, movieImage, moviesSeen, 
         <TouchableOpacity onPress={onReset} activeOpacity={0.6}>
           <Text style={styles.endText}>End session</Text>
         </TouchableOpacity>
+        {providers && (providers.stream.length > 0 || providers.rentBuy.length > 0) && (
+          <Text style={styles.attribution}>Where-to-watch info by JustWatch</Text>
+        )}
       </View>
     </View>
   );
@@ -174,6 +188,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  providers: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#c9c2ff',
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 12,
+  },
   actions: {
     width: '100%',
     gap: 12,
@@ -209,5 +231,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.3)',
     fontSize: 14,
     paddingVertical: 4,
+  },
+  attribution: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'center',
   },
 });
