@@ -19,7 +19,7 @@ export default function AgePickerScreen({ onPick, onCancel }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Who's watching?</Text>
+        <Text style={styles.title}>What ages are watching?</Text>
         <Text style={styles.subtitle}>Pick an age range — we'll only show movies that fit.</Text>
         <View style={styles.options}>
           {OPTIONS.map((opt) => (

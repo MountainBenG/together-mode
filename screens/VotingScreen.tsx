@@ -65,7 +65,13 @@ export default function VotingScreen({ code, playerId, isPlayer1, genreId, maxCe
     (useRecs ? fetchRecommendedMovies(recSeedIds!, maxCert) : fetchPopularMovies(genreId, maxCert))
       .then(async (data) => {
         let list = data;
-        if (useRecs && list.length === 0) list = await fetchPopularMovies(genreId, maxCert); // fallback if recs come back empty
+        // If recs come back thin (after the age filter, etc.), top up with popular so the
+        // deck is never too short to vote through.
+        if (useRecs && list.length < TIEBREAKER_AFTER) {
+          const filler = await fetchPopularMovies(genreId, maxCert);
+          const seen = new Set(list.map((m) => m.id));
+          list = [...list, ...filler.filter((m) => !seen.has(m.id))];
+        }
         moviesRef.current = list;
         setMovies(list);
       })
