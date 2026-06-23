@@ -37,9 +37,24 @@ export type JoinResult =
   | { ok: true; genreId: number | null; maxCert: string | null; recSeedIds: number[] }
   | { ok: false; reason: 'not_found' | 'full' | 'network' };
 
+// Interleave two seed lists (host's + joiner's recently-liked movies) and dedupe, so
+// the combined recommendation catalog draws from BOTH players: [host0, joiner0, host1, …].
+function mergeSeeds(a: number[], b: number[]): number[] {
+  const out: number[] = [];
+  const seen = new Set<number>();
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i++) {
+    for (const id of [a[i], b[i]]) {
+      if (id != null && !seen.has(id)) { seen.add(id); out.push(id); }
+    }
+  }
+  return out;
+}
+
 export async function joinSession(
   code: string,
-  playerId: string
+  playerId: string,
+  joinerSeeds: number[] = []
 ): Promise<JoinResult> {
   const { data, error } = await supabase
     .from('sessions')
@@ -50,12 +65,23 @@ export async function joinSession(
   if (error || !data) return { ok: false, reason: 'not_found' };
   if (data.status !== 'waiting' || data.player2_id) return { ok: false, reason: 'full' };
 
+  // Only blend in the joiner's taste if the host chose "Recommended" (rec_seed_ids set).
+  // If the host picked a genre, leave it alone — don't switch them into recs mode.
+  const hostSeeds: number[] = data.rec_seed_ids ?? [];
+  const combinedSeeds = hostSeeds.length > 0 ? mergeSeeds(hostSeeds, joinerSeeds) : hostSeeds;
+
   const { error: updateError } = await supabase
     .from('sessions')
-    .update({ player2_id: playerId, status: 'voting' })
+    .update({
+      player2_id: playerId,
+      status: 'voting',
+      ...(hostSeeds.length > 0 ? { rec_seed_ids: combinedSeeds } : {}),
+    })
     .eq('code', code.toUpperCase());
 
-  return updateError ? { ok: false, reason: 'network' } : { ok: true, genreId: data.genre_id ?? null, maxCert: data.max_certification ?? null, recSeedIds: data.rec_seed_ids ?? [] };
+  return updateError
+    ? { ok: false, reason: 'network' }
+    : { ok: true, genreId: data.genre_id ?? null, maxCert: data.max_certification ?? null, recSeedIds: combinedSeeds };
 }
 
 export async function submitVote(

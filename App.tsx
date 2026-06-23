@@ -8,6 +8,7 @@ import { track } from './services/analytics';
 import { getCurrentUserId, signOut } from './services/auth';
 import { Profile } from './services/profiles';
 import { Movie } from './services/movies';
+import { getRecentLikedMovies } from './services/preferences';
 import { ACCOUNTS_ENABLED, NEW_FLOW_ENABLED } from './lib/flags';
 import CodeScreen from './screens/CodeScreen';
 import AgePickerScreen from './screens/AgePickerScreen';
@@ -103,6 +104,8 @@ export default function App() {
     const sub = subscribeToSession(sessionCode, (session) => {
       if (session.status === 'voting') {
         sub.unsubscribe();
+        // The joiner may have blended their taste into the recs seed — use the combined set.
+        setRecSeedIds(session.rec_seed_ids ?? []);
         setScreen('voting');
       }
     });
@@ -156,7 +159,8 @@ export default function App() {
   async function handleJoin(code: string) {
     setLoading(true);
     setJoinError('');
-    const result = await joinSession(code, playerId);
+    const joinerSeeds = await getRecentLikedMovies(playerId);
+    const result = await joinSession(code, playerId, joinerSeeds);
     setLoading(false);
     if (result.ok) {
       track('session_joined', code, playerId);
