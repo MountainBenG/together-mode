@@ -104,3 +104,16 @@ Ben's vision: a **family account** you log into once (credentials saved → auto
 - Remaining polish (not blockers): smooth in-app signup (handle the email-confirmation step); server-side per-profile taste so it follows the account across devices (today it's local AsyncStorage keyed by profile id); an in-app "switch profile" button (today you switch by relaunching).
 
 **Age filter — FIXED 2026-06-16 (it was leaking R movies the whole time):** TMDB's `/discover` `certification.lte` is unreliable — under a G cap it still returned R movies (American Pie, Ted, EuroTrip). Now we verify each candidate's US rating ourselves via a shared `filterByCert()` and keep ONLY confirmed at/under the cap (unrated + above-cap dropped). Applied to BOTH the genre/popular path AND the movie-recs path. Tradeoff: catalog load is slower (it checks ~40 ratings). Also closes the recs age-filter gap noted earlier. **Lesson: don't trust TMDB's certification filter — verify ratings client-side.**
+
+---
+
+## Red-Team critique (The Critic, 2026-06-23) — kept items
+Ran the app through a critique agent. Most were already fixed (the tiebreaker set) or based on an older flow. The ones genuinely worth tracking:
+
+- [ ] **Can match on a movie you can't actually watch (or already saw).** "Where to watch" only shows AFTER the match — so you can land on a film not on your services, a $20 rental, or one you've already seen. Now that we fetch watch-providers, fix it: (a) pre-filter the deck to watchable titles (ask once which services each person has), (b) add a "seen it" hide/skip. **Highest-value of the bunch.**
+- [ ] **Identify movies by TMDB id, not title string.** We store/look up the matched movie by `matched_movie_title`, and `fetchWatchProviders` searches by title → duplicate/remake titles can show the wrong movie. Thread the TMDB id through match + display.
+- [ ] **Misleading ratings on unreleased movies.** The "more info" panel shows TMDB `vote_average` even for unreleased films (a 9.0 from a handful of votes). Hide/label the rating when the movie isn't released or has few votes.
+- [ ] **Match-screen stat reads as a letdown.** "Found on movie 8 — you said yes to 1" highlights low engagement at the celebration moment. Celebrate the movie; move the stat to an optional details view. (Quick fix.)
+- [ ] **Second-person install friction.** Joining requires installing the app. A no-install **web join** (code → URL → vote in the mobile browser, no account) is the highest-leverage adoption fix for the phone app. (Partly mooted by the phoneless TV direction, but real for phones.)
+
+**Strategic (not a quick fix — the strongest point):** the app is a ~90-second utility with no reason to return. The recurring fix across the critique is a **persistent shared watchlist** — mutual yeses accrue into a ranked shared queue a pair comes back to. Adds retention AND makes "where to watch" get hit far more often (helps the business model). Worth weighing as a big next direction.
