@@ -32,3 +32,21 @@ You can't run a custom voice/gesture app *on* a Vizio (closed platform; no camer
 ## What "starting the TV" means now
 - It's the big **Vision Click integration** — hardware + voice + gesture — a real R&D milestone. Loop in **Dad** (hardware/robotics is his world).
 - **Starts now without the TV:** (a) the business model can begin on the **phone app** (affiliate links on "Where to watch"); (b) prototype the phoneless flow as a **web app** on a computer + webcam, using the Vizio as the screen once it arrives.
+
+---
+
+## Day 1 with the Vizio (arriving 2026-06-29) — brainstorm
+**The first "whoa":** HDMI the brain-computer → Vizio becomes a big monitor → open Together Mode fullscreen on it. App on a TV = it's a living-room thing now. Tiny to do, big feeling.
+
+**Build order once connected:**
+1. Get the experience big on the TV (movies, voting, match) — keyboard/mouse control FIRST, no Vision Click yet. Prove the screen.
+2. Add **voice** (mic → "yes" / "no" / "start this movie") — likely the fastest magic.
+3. Add **gesture** (webcam → thumbs up/down — the hand-classifier work, finally on the big screen).
+4. Crack **room-voting** (multi-person decide-together).
+
+**Realization worth keeping:** because the *computer* drives the TV (not the closed Vizio OS), **"start this movie" can actually play** — the computer opens the streaming service's web page right on the screen. The "…and it plays" dream is reachable in this setup (subject to each service's web player + being logged in).
+
+**Open questions (Ben's call):**
+- First input to build — voice or gesture?
+- Room-voting — camera counts everyone's thumbs, or one shared "the room decides"?
+- The one demo moment to nail first (e.g., to show Dad).
